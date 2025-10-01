@@ -73,8 +73,10 @@ Platforma umožňuje spravovat kurzy a přihlašovat se do nich. Studenti dostá
 - `notification` – nová systémová zpráva  
 - `course_update` – změny v kurzu (úprava, smazání, nová lekce)  
 - `enrollment_update` – potvrzení registrace nebo odhlášení  
-- `certificate_ready` – certifikát vygenerován  
-- `attendance_update` – aktuální stav přihlášení studentů (volitelné)  
+- `certificate_ready` – certifikát vygenerován
+- `exam_start` – spuštění testu instruktorem, student může začít pracovat na testu
+- `assignment_due` – upozornění na blížící se termín odevzdání úkolu
+- `assignment_feedback` - instruktor odeslal zpětnou vazbu k úkolu
 
 ---
 
