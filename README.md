@@ -169,3 +169,4 @@ Platforma umožňuje spravovat kurzy a přihlašovat se do nich. Studenti dostá
 - Odhlášení → zápis odstraněn  
 - WebSocket → po `POST /enrollments` přijde `notification`  
 - Generování certifikátu → jen pokud status = `completed` 
+- Instruktor spustí test - WebSocket uživatelovi také spustí test
