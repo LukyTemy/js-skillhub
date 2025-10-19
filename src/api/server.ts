@@ -1,5 +1,5 @@
 import {homepageController} from "./controllers/homepage/homepage.controller";
-import {AircraftController} from "./controllers/aircraft/aircraft.controller";
+import {UserController} from "./controllers/users/user.controller";
 import {apiErrorHandler} from "../middleware/error.middleware";
 import express = require("express");
 
@@ -13,12 +13,12 @@ server.use(express.urlencoded({extended: true}));
 server.get("/", homepageController.homepage);
 
 // Aircrafts
-const aircraftController = new AircraftController();
-server.get("/aircrafts", aircraftController.getAll);
-server.get("/aircrafts/:id", aircraftController.getById);
-server.post("/aircrafts", aircraftController.create);
-server.put("/aircrafts/:id", aircraftController.update);
-server.delete("/aircrafts/:id", aircraftController.delete);
+const userController = new UserController();
+server.get("/users", userController.getAll);
+server.get("/users/:id", userController.getById);
+server.post("/users", userController.create);
+server.put("/users/:id", userController.update);
+server.delete("/users/:id", userController.delete);
 
 // Middleware: Error handling
 server.use(apiErrorHandler);

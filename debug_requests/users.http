@@ -1,0 +1,44 @@
+### GET all users
+GET http://localhost:3000/users
+
+### GET a single user by ID
+GET http://localhost:3000/users/68b58c081c3a9bdd92b29f78
+
+### POST (Create) a new user
+# Replace the email, password, and name with desired values.
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "name": "Jane Doe",
+  "email": "jane.doe@example.com",
+  "password": "StrongPassword123",
+  "role": "student"
+}
+
+### POST (Create) request with invalid DTO body
+# This will likely fail due to invalid email or password length (as defined in the DTO).
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "name": "JD",
+  "email": "invalid-email",
+  "password": "weak",
+  "role": "instructor"
+}
+
+### PUT (Update) an existing user
+# Use a valid user ID (e.g., from the successful POST or GET requests)
+PUT http://localhost:3000/users/672f490237aeb507fc4ba504
+Content-Type: application/json
+
+{
+  "name": "Jane Smith",
+  "email": "jane.smith@new-domain.com",
+  "role": "instructor"
+}
+
+### DELETE a user
+# Use a valid user ID for deletion.
+DELETE http://localhost:3000/users/68b47b0611a2fa5ad66fa10d
