@@ -16,6 +16,18 @@ Content-Type: application/json
   "role": "student"
 }
 
+### POST (Create) a new user
+# Replace the email, password, and name with desired values.
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "password": "StrongPassword123",
+  "role": "instructor"
+}
+
 ### POST (Create) request with invalid DTO body
 # This will likely fail due to invalid email or password length (as defined in the DTO).
 POST http://localhost:3000/users

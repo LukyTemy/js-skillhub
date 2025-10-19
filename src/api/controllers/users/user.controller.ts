@@ -7,26 +7,26 @@ import {IdParam} from "../../../types/base.dto";
 
 export class UserController {
     async getAll(req: Request, res: Response) {
-        const aircraft = await userService.getAll();
-        res.status(200).send(aircraft);
+        const user = await userService.getAll();
+        res.status(200).send(user);
     }
 
     async getById(req: Request, res: Response) {
         const {id} = await validateParams(req, IdParam);
-        const aircraft = await userService.getById(id);
+        const user = await userService.getById(id);
 
-        if (aircraft === null) {
+        if (user === null) {
             res.status(404).send();
             return;
         }
 
-        res.status(200).send(aircraft);
+        res.status(200).send(user);
     }
 
     async create(req: Request, res: Response) {
         const dto = await validateBody(req, UserDto);
-        const aircraft = await userService.create(dto);
-        res.status(201).send(aircraft);
+        const user = await userService.create(dto);
+        res.status(201).send(user);
     }
 
     async update(req: Request, res: Response) {

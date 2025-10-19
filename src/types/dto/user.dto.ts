@@ -1,8 +1,5 @@
 import { IsNotEmpty, IsEmail, IsString, Length, IsEnum } from "class-validator";
 
-/**
- * Defines the possible roles a user can have.
- */
 export enum UserRole {
     Student = "student",
     Instructor = "instructor",
@@ -10,11 +7,10 @@ export enum UserRole {
 }
 
 export class UserDto {
-
     @IsString()
     @Length(2, 32, { message: "Name must be between 2 and 32 characters" })
     @IsNotEmpty()
-    public name!: string;
+    public name: string;
 
     @IsEmail()
     @IsNotEmpty()

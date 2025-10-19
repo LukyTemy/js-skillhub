@@ -1,0 +1,125 @@
+### GET all courses
+GET http://localhost:3000/courses
+
+### GET all courses with filtering (example: by category)
+GET http://localhost:3000/courses?category=programming
+
+### GET a single course by ID
+GET http://localhost:3000/courses/68b58c081c3a9bdd92b29f78
+
+### POST (Create) a new course
+# Replace the instructorId with a valid user ID who is an instructor
+POST http://localhost:3000/courses
+Content-Type: application/json
+
+{
+  "title": "Introduction to TypeScript",
+  "description": "Learn TypeScript fundamentals from scratch",
+  "category": "programming",
+  "instructorId": "68f52f1807e4de66c711165e",
+  "lessons": [
+    {
+      "lessonId": "68b58c081c3a9bdd92b29f79",
+      "title": "Getting Started with TypeScript",
+      "content": [
+        {
+          "type": "text",
+          "data": "Welcome to TypeScript! This is an introduction lesson."
+        },
+        {
+          "type": "code",
+          "data": "const message: string = 'Hello, TypeScript!';"
+        }
+      ],
+      "order": 1
+    }
+  ]
+}
+
+### POST (Create) request with invalid DTO body
+# This will likely fail due to validation errors
+POST http://localhost:3000/courses
+Content-Type: application/json
+
+{
+  "title": "A",
+  "description": "Too short",
+  "category": "X",
+  "instructorId": "invalid-uuid",
+  "lessons": []
+}
+
+### PUT (Update) an existing course
+# Use a valid course ID
+PUT http://localhost:3000/courses/68b58c081c3a9bdd92b29f78
+Content-Type: application/json
+
+{
+  "title": "Advanced TypeScript Masterclass",
+  "description": "Deep dive into advanced TypeScript concepts and patterns",
+  "category": "web-development",
+  "instructorId": "68b58c081c3a9bdd92b29f78",
+  "lessons": [
+    {
+      "lessonId": "68b58c081c3a9bdd92b29f79",
+      "title": "Updated Lesson Title",
+      "content": [
+        {
+          "type": "text",
+          "data": "Updated lesson content"
+        }
+      ],
+      "order": 1
+    }
+  ]
+}
+
+### DELETE a course
+# Use a valid course ID for deletion
+DELETE http://localhost:3000/courses/68b58c081c3a9bdd92b29f78
+
+### POST Add a lesson to a course
+# Use a valid course ID
+POST http://localhost:3000/courses/68b58c081c3a9bdd92b29f78/lessons
+Content-Type: application/json
+
+{
+  "lessonId": "68b58c081c3a9bdd92b29f7a",
+  "title": "TypeScript Interfaces",
+  "content": [
+    {
+      "type": "text",
+      "data": "Learn about interfaces in TypeScript"
+    },
+    {
+      "type": "code",
+      "data": "interface User { name: string; age: number; }"
+    }
+  ],
+  "order": 2
+}
+
+### PUT Update a lesson in a course
+# Use valid course ID and lesson ID
+PUT http://localhost:3000/courses/68b58c081c3a9bdd92b29f78/lessons/68b58c081c3a9bdd92b29f79
+Content-Type: application/json
+
+{
+  "lessonId": "68b58c081c3a9bdd92b29f79",
+  "title": "Updated Lesson Title - Advanced Concepts",
+  "content": [
+    {
+      "type": "text",
+      "data": "Updated content with advanced concepts"
+    },
+    {
+      "type": "video",
+      "data": "https://example.com/video/advanced-typescript"
+    }
+  ],
+  "order": 1
+}
+
+### DELETE a lesson from a course
+# Use valid course ID and lesson ID
+DELETE http://localhost:3000/courses/68b58c081c3a9bdd92b29f78/lessons/68b58c081c3a9bdd92b29f79

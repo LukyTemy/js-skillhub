@@ -10,9 +10,17 @@ async function validateData<T>(data: any, type: new () => T): Promise<T> {
 
     if (errors.length > 0) {
         const errorMessage = errors
-            .map((error) => Object.values(error.constraints!))
+            .map((error) => error.constraints ? Object.values(error.constraints) : [])
             .flat()
             .join(", ");
+
+        if (errorMessage.length === 0) {
+            const nestedErrors = errors
+                .map(error => error.toString())
+                .join(", ");
+            throw new ApiError("bad input", nestedErrors, 400);
+        }
+
         throw new ApiError("bad input", errorMessage, 400);
     }
 
