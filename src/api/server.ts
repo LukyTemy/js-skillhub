@@ -40,7 +40,7 @@ server.delete("/courses/:id/lessons/:lessonId", courseController.deleteLesson);
 // Enrollments
 const enrollmentController = new EnrollmentController();
 server.post("/enrollments", enrollmentController.create);
-server.get("/enrollments/:user_id", enrollmentController.getByUser);
+server.get("/enrollments/:userId", enrollmentController.getByUser);
 server.delete("/enrollments/:id", enrollmentController.delete);
 
 // Notifications

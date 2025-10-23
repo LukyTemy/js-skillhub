@@ -2,7 +2,7 @@
 GET http://localhost:3000/users
 
 ### GET a single user by ID
-GET http://localhost:3000/users/68b58c081c3a9bdd92b29f78
+GET http://localhost:3000/users/68fa6ad5c2cab0faeec2f2ea
 
 ### POST (Create) a new user
 # Replace the email, password, and name with desired values.

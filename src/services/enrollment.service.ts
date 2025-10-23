@@ -1,14 +1,13 @@
 import Enrollment from "../database/models/enrollment.model";
-import { EnrollmentDto } from "../types/dto/enrollment.dto";
+import {EnrollmentDto} from "../types/dto/enrollment.dto";
 import mongo from "../database/mongo";
-import { ObjectId } from "mongodb";
+import {ObjectId} from "mongodb";
 
 export const enrollmentService = {
     enrollment_collection: mongo.db.collection("enrollments"),
 
     async create(data: EnrollmentDto) {
         const enrollment = new Enrollment(new ObjectId(data.userId), new ObjectId(data.courseId), data.status);
-        enrollment.enrolledAt = new Date();
         await this.enrollment_collection.insertOne(enrollment);
         return enrollment;
     },
@@ -34,7 +33,15 @@ export const enrollmentService = {
     },
 
     async getByUser(userId: string) {
-        return this.enrollment_collection.find({ userId: new ObjectId(userId) }).toArray();
+        if (!ObjectId.isValid(userId)) {
+            return [];
+        }
+
+        const userObjectId = new ObjectId(userId);
+
+        return await this.enrollment_collection
+            .find({userId: userObjectId})
+            .toArray();
     },
 
     async getByCourse(courseId: string) {

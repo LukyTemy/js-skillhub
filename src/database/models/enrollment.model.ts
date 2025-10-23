@@ -10,9 +10,9 @@ export default class Enrollment {
     constructor(
         public userId: ObjectId,
         public courseId: ObjectId,
-        public status: EnrollmentStatus
+        public status: EnrollmentStatus,
+        public enrolledAt: Date = new Date()
     ) {}
 
     _id?: ObjectId;
-    enrolledAt?: Date;
 }

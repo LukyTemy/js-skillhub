@@ -1,4 +1,6 @@
-import { IsNotEmpty, IsUUID, IsEnum, IsDate } from "class-validator";
+import {IsNotEmpty, IsEnum, IsDate, IsDateString, IsString} from "class-validator";
+import {ObjectId} from "mongodb";
+import {Type} from "class-transformer";
 
 export enum EnrollmentStatus {
   Active = "active",
@@ -7,19 +9,13 @@ export enum EnrollmentStatus {
 }
 
 export class EnrollmentDto {
-  @IsUUID()
   @IsNotEmpty()
   public userId: string;
 
-  @IsUUID()
   @IsNotEmpty()
   public courseId: string;
 
   @IsEnum(EnrollmentStatus, { message: "Status must be one of: active, cancelled, or completed" })
   @IsNotEmpty()
   public status: EnrollmentStatus;
-
-  @IsDate()
-  @IsNotEmpty()
-  public enrolledAt: Date;
 }

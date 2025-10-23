@@ -1,0 +1,16 @@
+### POST (Create) a new enrollment
+POST http://localhost:3000/enrollments
+Content-Type: application/json
+
+{
+  "userId": "68fa6ad5c2cab0faeec2f2ea",
+  "courseId": "68fa6af4c2cab0faeec2f2ec",
+  "status": "active"
+}
+
+### GET enrollments based on user ID
+GET http://localhost:3000/enrollments/68fa6ad5c2cab0faeec2f2ea
+
+
+### DELETE enrollment based on ID
+DELETE http://localhost:3000/enrollments/68fa7415a090d414fdfc7905

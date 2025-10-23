@@ -7,9 +7,9 @@ export const userService = {
     user_collection: mongo.db.collection("users"),
 
     async create(data: UserDto) {
-        const aircraft = new User(data.name, data.email, data.password, data.role);
-        await this.user_collection.insertOne(aircraft);
-        return aircraft;
+        const user = new User(data.name, data.email, data.password, data.role);
+        await this.user_collection.insertOne(user);
+        return user;
     },
 
     async getAll() {

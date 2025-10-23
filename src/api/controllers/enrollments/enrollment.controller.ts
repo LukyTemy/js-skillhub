@@ -14,8 +14,13 @@ export class EnrollmentController {
 
     async getByUser(req: Request, res: Response) {
         const { userId } = req.params;
+
+        if (!userId) {
+            return res.status(400).json({ status: "bad input", message: "Missing userId" });
+        }
+
         const enrollments = await enrollmentService.getByUser(userId);
-        res.status(200).send(enrollments);
+        res.status(200).json(enrollments);
     }
 
     async delete(req: Request, res: Response) {

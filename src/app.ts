@@ -1,4 +1,4 @@
-import "reflect-metadata";
+    import "reflect-metadata";
 import {server} from "./api/server";
 import mongo from "./database/mongo";
 
