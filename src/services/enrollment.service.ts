@@ -33,10 +33,6 @@ export const enrollmentService = {
     },
 
     async getByUser(userId: string) {
-        if (!ObjectId.isValid(userId)) {
-            return [];
-        }
-
         const userObjectId = new ObjectId(userId);
 
         return await this.enrollment_collection

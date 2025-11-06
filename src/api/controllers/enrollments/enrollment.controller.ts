@@ -4,6 +4,7 @@ import { Request, Response } from "express";
 import { enrollmentService } from "../../../services/enrollment.service";
 import { validateBody, validateParams } from "../../../middleware/validation.middleware";
 import { IdParam } from "../../../types/base.dto";
+import {ApiError} from "../../../types/api.error";
 
 export class EnrollmentController {
     async create(req: Request, res: Response) {
@@ -16,11 +17,11 @@ export class EnrollmentController {
         const { userId } = req.params;
 
         if (!userId) {
-            return res.status(400).json({ status: "bad input", message: "Missing userId" });
+            throw new ApiError("Not Found", "User was not found", 400)
         }
 
         const enrollments = await enrollmentService.getByUser(userId);
-        res.status(200).json(enrollments);
+        res.status(200).send(enrollments);
     }
 
     async delete(req: Request, res: Response) {

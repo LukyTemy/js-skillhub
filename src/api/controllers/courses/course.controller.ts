@@ -24,20 +24,9 @@ export class CourseController {
     }
 
     async create(req: Request, res: Response) {
-        try {
-            console.log("Course creation started", req.body);
-            const dto = await validateBody(req, CourseDto);
-            console.log("DTO validated:", dto);
-            const course = await courseService.create(dto);
-            console.log("Course created:", course);
-            res.status(201).send(course);
-        } catch (error) {
-            console.error("Error in course creation:", error);
-            res.status(500).json({
-                status: "error",
-                message: "Internal Server Error, see server logs in console"
-            });
-        }
+        const dto = await validateBody(req, CourseDto);
+        const course = await courseService.create(dto);
+        res.status(201).send(course);
     }
 
     async update(req: Request, res: Response) {
@@ -62,7 +51,7 @@ export class CourseController {
 
     async addLesson(req: Request, res: Response) {
         const { id } = await validateParams(req, IdParam);
-        const dto = await validateBody(req, LessonDto); // You'll need to create LessonDto
+        const dto = await validateBody(req, LessonDto);
         const existingCourse = await courseService.getById(id);
 
         if (existingCourse === null) {
