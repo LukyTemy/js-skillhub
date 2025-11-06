@@ -4,7 +4,8 @@
   "main": "src/app.ts",
   "scripts": {
     "start": "vite-node src/app.ts",
-    "test": "vitest"
+    "test": "vitest --no-file-parallelism",
+    "test:watch": "vitest --no-file-parallelism"
   },
   "author": "",
   "license": "ISC",
@@ -13,6 +14,7 @@
     "@types/express": "^5.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "dotenv": "^16.4.5",
     "express": "^5.0.0",
     "mongodb": "^6.19.0",
     "reflect-metadata": "^0.2.2",

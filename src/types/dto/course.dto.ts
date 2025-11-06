@@ -1,5 +1,6 @@
 import {IsNotEmpty, IsString, IsArray, IsUUID, IsDate, IsNumber, IsEnum, IsUrl, ArrayMinSize, ValidateNested, Length} from "class-validator";
 import { Type } from "class-transformer";
+import {ObjectId} from "mongodb";
 
 export enum ContentType {
   Text = "text",
@@ -19,7 +20,7 @@ export class LessonContentDto {
 
 export class LessonDto {
   @IsNotEmpty()
-  public lessonId: string;
+  public lessonId: ObjectId;
 
   @IsString()
   @Length(2, 100, { message: "Lesson title must be between 2 and 100 characters" })
@@ -54,7 +55,7 @@ export class CourseDto {
   public category: string;
 
   @IsNotEmpty()
-  public instructorId: string;
+  public instructorId: ObjectId;
 
   @IsArray()
   @ValidateNested({ each: true })

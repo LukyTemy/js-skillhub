@@ -39,20 +39,30 @@ export const courseService = {
     },
 
     async addLesson(courseId: string, lesson: any) {
+        const updatedLesson = {
+            ...lesson,
+            lessonId: new ObjectId(lesson.lessonId)
+        }
+
         return this.course_collection.findOneAndUpdate(
             { _id: new ObjectId(courseId) },
-            { $push: { lessons: lesson } },
+            { $push: { lessons: updatedLesson } },
             { returnDocument: "after" }
         );
     },
 
     async updateLesson(courseId: string, lessonId: string, lessonData: any) {
+        const updatedLessonData = {
+            ...lessonData,
+            lessonId: new ObjectId(lessonId)
+        }
+
         return this.course_collection.findOneAndUpdate(
             {
                 _id: new ObjectId(courseId),
                 "lessons.lessonId": new ObjectId(lessonId)
             },
-            { $set: { "lessons.$": lessonData } },
+            { $set: { "lessons.$": updatedLessonData } },
             { returnDocument: "after" }
         );
     },

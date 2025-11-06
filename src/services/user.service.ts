@@ -21,7 +21,11 @@ export const userService = {
     },
 
     async update(id: string, data: UserDto) {
-        return this.user_collection.findOneAndUpdate({_id: new ObjectId(id)}, {$set: data}, {returnDocument: "after"});
+        return this.user_collection.findOneAndUpdate(
+            { _id: new ObjectId(id) },
+            { $set: data },
+            { returnDocument: "after" }
+        );
     },
 
     async delete(id: string) {
