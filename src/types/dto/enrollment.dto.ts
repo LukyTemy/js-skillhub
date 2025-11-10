@@ -10,10 +10,10 @@ export enum EnrollmentStatus {
 
 export class EnrollmentDto {
   @IsNotEmpty()
-  public userId: string;
+  public userId: ObjectId;
 
   @IsNotEmpty()
-  public courseId: string;
+  public courseId: ObjectId;
 
   @IsEnum(EnrollmentStatus, { message: "Status must be one of: active, cancelled, or completed" })
   @IsNotEmpty()

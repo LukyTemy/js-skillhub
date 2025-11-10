@@ -37,10 +37,6 @@ export const certificateService = {
         return this.certificate_collection.find({ userId: new ObjectId(userId) }).toArray();
     },
 
-    async getByCourse(courseId: string) {
-        return this.certificate_collection.find({ courseId: new ObjectId(courseId) }).toArray();
-    },
-
     async getUserCertificate(userId: string, courseId: string) {
         return this.certificate_collection.findOne({
             userId: new ObjectId(userId),

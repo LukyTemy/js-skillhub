@@ -1,13 +1,12 @@
 import { IsNotEmpty, IsUUID, IsDate, IsUrl } from "class-validator";
+import {ObjectId} from "mongodb";
 
 export class CertificateDto {
-  @IsUUID()
   @IsNotEmpty()
-  public userId: string;
+  public userId: ObjectId;
 
-  @IsUUID()
   @IsNotEmpty()
-  public courseId: string;
+  public courseId: ObjectId;
 
   @IsDate()
   @IsNotEmpty()

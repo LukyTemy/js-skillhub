@@ -7,8 +7,8 @@ import { IdParam } from "../../../types/base.dto";
 
 export class NotificationController {
     async getByUser(req: Request, res: Response) {
-        const { userId } = req.params;
-        const notifications = await notificationService.getByUser(userId);
+        const { id } = await validateParams(req, IdParam);
+        const notifications = await notificationService.getByUser(id);
         res.status(200).send(notifications);
     }
 

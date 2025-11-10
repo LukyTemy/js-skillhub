@@ -37,6 +37,7 @@ describe('Course Endpoints', () => {
     describe('GET /courses', () => {
         it('should return all courses', async () => {
             const res = await request.get('/courses');
+            console.log(res.body)
             expect(res.status).toBe(200);
             expect(res.body).toBeInstanceOf(Array);
             expect(res.body.length).toBe(1);
@@ -47,6 +48,7 @@ describe('Course Endpoints', () => {
     describe('GET /courses/:id', () => {
         it('should return a course by id', async () => {
             const res = await request.get(`/courses/${courseId}`);
+            console.log(res.body)
             expect(res.status).toBe(200);
             expect(res.body.title).toBe("Initial Course");
         });
@@ -54,6 +56,7 @@ describe('Course Endpoints', () => {
         it('should return 404 for non-existent course', async () => {
             const nonExistentId = new ObjectId();
             const res = await request.get(`/courses/${nonExistentId}`);
+            console.log(res.body)
             expect(res.status).toBe(404);
         });
     });
@@ -69,6 +72,7 @@ describe('Course Endpoints', () => {
             };
 
             const res = await request.post('/courses').send(newCourse);
+            console.log(res.body)
             expect(res.status).toBe(201);
             expect(res.body.title).toBe(newCourse.title);
             expect(res.body.instructorId).toBe(instructorId.toString());
@@ -89,6 +93,7 @@ describe('Course Endpoints', () => {
             };
 
             const res = await request.put(`/courses/${courseId}`).send(updatedCourse);
+            console.log(res.body)
             expect(res.status).toBe(202);
             expect(res.body.title).toBe(updatedCourse.title);
         });
@@ -97,6 +102,7 @@ describe('Course Endpoints', () => {
     describe('DELETE /courses/:id', () => {
         it('should delete a course', async () => {
             const res = await request.delete(`/courses/${courseId}`);
+            console.log(res.body)
             expect(res.status).toBe(204);
 
             const course = await mongo.db.collection("courses").findOne({_id: courseId});
@@ -118,6 +124,7 @@ describe('Course Endpoints', () => {
         describe('POST /courses/:id/lessons', () => {
             it('should add a lesson to a course', async () => {
                 const res = await request.post(`/courses/${courseId}/lessons`).send(newLesson);
+                console.log(res.body)
                 expect(res.status).toBe(201);
                 expect(res.body.lessons).toHaveLength(1);
                 expect(res.body.lessons[0].title).toBe(newLesson.title);
@@ -130,7 +137,7 @@ describe('Course Endpoints', () => {
 
                 const updatedLesson = { ...newLesson, title: "Updated Lesson Title" };
                 const res = await request.put(`/courses/${courseId}/lessons/${newLesson.lessonId}`).send(updatedLesson);
-
+                console.log(res.body)
                 expect(res.status).toBe(202);
                 expect(res.body.lessons[0].title).toBe("Updated Lesson Title");
             });
@@ -141,6 +148,7 @@ describe('Course Endpoints', () => {
                 await request.post(`/courses/${courseId}/lessons`).send(newLesson);
 
                 const res = await request.delete(`/courses/${courseId}/lessons/${newLesson.lessonId}`);
+                console.log(res.body)
                 expect(res.status).toBe(202);
                 expect(res.body.lessons).toHaveLength(0);
             });

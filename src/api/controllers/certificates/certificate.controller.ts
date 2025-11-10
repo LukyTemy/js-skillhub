@@ -7,8 +7,8 @@ import {IdParam} from "../../../types/base.dto";
 
 export class CertificateController {
     async getUserCertificate(req: Request, res: Response) {
-        const { userId, courseId } = req.params;
-        const certificate = await certificateService.getUserCertificate(userId, courseId);
+        const { user_id, course_id } = req.params;
+        const certificate = await certificateService.getUserCertificate(user_id, course_id);
 
         if (certificate === null) {
             res.status(404).send();

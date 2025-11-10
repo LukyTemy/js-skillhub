@@ -45,7 +45,7 @@ server.delete("/enrollments/:id", enrollmentController.delete);
 
 // Notifications
 const notificationController = new NotificationController();
-server.get("/notifications/:user_id", notificationController.getByUser); // historie notifikací
+server.get("/notifications/:id", notificationController.getByUser); // historie notifikací
 server.put("/notifications/:id/read", notificationController.markAsRead); // označení jako přečtené
 
 const certificateController = new CertificateController();
