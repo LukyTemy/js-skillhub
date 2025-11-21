@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27018:27017"
+    volumes:
+      - courses-backend-mongo:/data/db
+    networks:
+      - mongo-net
+  courses-backend:
+    build:
+      context: courses-backend
+    ports:
+      - "5001:3000"
+    environment:
+      - MONGO_URL=mongodb://mongo:27017/courses-backend
+      - CORS_ORIGIN=http://localhost:5002
+    networks:
+      - mongo-net
+
+volumes:
+  courses-backend-mongo:
+
+networks:
+  mongo-net:
