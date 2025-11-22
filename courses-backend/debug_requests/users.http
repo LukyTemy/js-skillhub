@@ -54,3 +54,13 @@ Content-Type: application/json
 ### DELETE a user
 # Use a valid user ID for deletion.
 DELETE http://localhost:3000/users/68b47b0611a2fa5ad66fa10d
+
+### Test mail-service
+POST http://localhost:5001/debug/send-mail
+Content-Type: application/json
+
+{
+  "to": "example@gmail.com",
+  "subject": "Test z debug endpointu",
+  "text": "Ahoj, tohle je testovací email z mail-service."
+}

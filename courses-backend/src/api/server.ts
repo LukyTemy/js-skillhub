@@ -6,12 +6,45 @@ import { NotificationController } from "./controllers/notifications/notification
 import { CertificateController } from "./controllers/certificates/certificate.controller";
 import { apiErrorHandler } from "../middleware/error.middleware";
 import express = require("express");
+import {sendMail} from "../grpc/mail.client";
 
 export const server = express();
 
 // Middleware to parse JSON and URL-encoded data
 server.use(express.json());
 server.use(express.urlencoded({ extended: true }));
+
+// Temporary debug endpoint for sending email via nodemailer using
+server.post("/debug/send-mail", async (req, res, next) => {
+    try {
+        const { to, subject, text } = req.body ?? {};
+
+        if (!to || !subject || !text) {
+            res.status(400).json({
+                error: "Missing required fields: to, subject, text",
+            });
+            return;
+        }
+
+        const response = await sendMail({ to, subject, text });
+
+        if (!response.success) {
+            res.status(500).json({
+                success: false,
+                error: response.error ?? "Failed to send email",
+            });
+            return;
+        }
+
+        res.status(200).json({
+            success: true,
+            messageId: response.messageId,
+        });
+    } catch (err) {
+        next(err);
+    }
+});
+
 
 // Homepage
 server.get("/", homepageController.homepage);

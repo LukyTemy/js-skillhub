@@ -20,7 +20,9 @@
     "reflect-metadata": "^0.2.2",
     "supertest": "^7.0.0",
     "vite-node": "^2.1.1",
-    "vitest": "^2.1.1"
+    "vitest": "^2.1.1",
+    "@grpc/proto-loader": "^0.7.5",
+    "@grpc/grpc-js": "^1.11.8"
   },
   "devDependencies": {
     "@types/node": "^22.7.4"

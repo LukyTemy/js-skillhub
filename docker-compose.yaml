@@ -17,6 +17,22 @@ services:
     environment:
       - MONGO_URL=mongodb://mongo:27017/courses-backend
       - CORS_ORIGIN=http://localhost:5002
+      - MAIL_SERVICE_ADDRESS=mail-service:50051
+    networks:
+      - mongo-net
+  mail-service:
+    build:
+      context: ./mail-service
+    environment:
+      - MAIL_SERVICE_PORT=50051
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_SECURE=${SMTP_SECURE}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM=${SMTP_FROM}
+    ports:
+      - "50051:50051"
     networks:
       - mongo-net
 
