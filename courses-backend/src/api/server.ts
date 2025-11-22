@@ -51,11 +51,13 @@ server.get("/", homepageController.homepage);
 
 // Users
 const userController = new UserController();
+const certificateController = new CertificateController();
 server.get("/users", userController.getAll);
 server.get("/users/:id", userController.getById);
 server.post("/users", userController.create);
 server.put("/users/:id", userController.update);
 server.delete("/users/:id", userController.delete);
+server.get("/users/:id/certificates", certificateController.getByUser)
 
 // Courses
 const courseController = new CourseController();
@@ -64,6 +66,7 @@ server.get("/courses", courseController.getAll);
 server.get("/courses/:id", courseController.getById);
 server.put("/courses/:id", courseController.update);
 server.delete("/courses/:id", courseController.delete);
+server.get("/instructors/:id/courses", courseController.getByInstructor);
 
 // Courses - Lessons
 server.post("/courses/:id/lessons", courseController.addLesson);
@@ -81,7 +84,7 @@ const notificationController = new NotificationController();
 server.get("/notifications/:id", notificationController.getByUser); // historie notifikací
 server.put("/notifications/:id/read", notificationController.markAsRead); // označení jako přečtené
 
-const certificateController = new CertificateController();
+// Certificates
 server.get("/certificates/:user_id/:course_id", certificateController.getUserCertificate); // stažení PDF certifikátu
 
 // Middleware: Error handling

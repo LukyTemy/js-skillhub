@@ -60,4 +60,10 @@ export class CertificateController {
         await certificateService.delete(id);
         res.status(204).send();
     }
+
+    async getByUser(req: Request, res: Response) {
+        const { id } = await validateParams(req, IdParam);
+        const certificates = await certificateService.getByUser(id);
+        res.status(200).send(certificates);
+    }
 }

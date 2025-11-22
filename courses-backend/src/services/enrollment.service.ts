@@ -12,10 +12,6 @@ export const enrollmentService = {
         return enrollment;
     },
 
-    async getAll() {
-        return this.enrollment_collection.find().toArray();
-    },
-
     async getById(id: string) {
         return this.enrollment_collection.findOne({ _id: new ObjectId(id) });
     },

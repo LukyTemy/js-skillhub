@@ -13,10 +13,6 @@ export const notificationService = {
         return notification;
     },
 
-    async getAll() {
-        return this.notification_collection.find().toArray();
-    },
-
     async getById(id: string) {
         return this.notification_collection.findOne({ _id: new ObjectId(id) });
     },
@@ -35,13 +31,6 @@ export const notificationService = {
 
     async getByUser(userId: string) {
         return this.notification_collection.find({ userId: new ObjectId(userId) }).sort({ timestamp: -1 }).toArray();
-    },
-
-    async getUnreadByUser(userId: string) {
-        return this.notification_collection.find({
-            userId: new ObjectId(userId),
-            read: false
-        }).sort({ timestamp: -1 }).toArray();
     },
 
     async markAsRead(id: string) {

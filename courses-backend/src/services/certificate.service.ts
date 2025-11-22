@@ -44,6 +44,7 @@ export const certificateService = {
         });
     },
 
+    /*
     async generateCertificate(userId: string, courseId: string, fileUrl: string) {
         const existingCertificate = await this.getUserCertificate(userId, courseId);
         if (existingCertificate) {
@@ -56,4 +57,5 @@ export const certificateService = {
         await this.certificate_collection.insertOne(certificate);
         return certificate;
     },
+    */
 };

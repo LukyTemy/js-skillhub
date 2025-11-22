@@ -89,4 +89,10 @@ export class CourseController {
         const course = await courseService.deleteLesson(id, lessonId);
         res.status(202).send(course);
     }
+
+    async getByInstructor(req: Request, res: Response) {
+        const { id } = await validateParams(req, IdParam);
+        const courses = await courseService.getByInstructor(id);
+        res.status(200).send(courses);
+    }
 }
