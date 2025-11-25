@@ -6,6 +6,7 @@ import { NotificationController } from "./controllers/notifications/notification
 import { CertificateController } from "./controllers/certificates/certificate.controller";
 import { apiErrorHandler } from "../middleware/error.middleware";
 import express = require("express");
+import cors from 'cors';
 import {sendMail} from "../grpc/mail.client";
 
 export const server = express();
@@ -13,6 +14,12 @@ export const server = express();
 // Middleware to parse JSON and URL-encoded data
 server.use(express.json());
 server.use(express.urlencoded({ extended: true }));
+
+// Enable CORS for browser-based frontend (allow all origins by default).
+// If you want to restrict origins in production, replace with specific origin(s).
+server.use(cors({
+    origin: process.env.CORS_ORIGIN
+}))
 
 // Temporary debug endpoint for sending email via nodemailer using
 server.post("/debug/send-mail", async (req, res, next) => {

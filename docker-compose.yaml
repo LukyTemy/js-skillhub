@@ -35,6 +35,17 @@ services:
       - "50051:50051"
     networks:
       - mongo-net
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_BACKEND_URL=http://localhost:5001
+    ports:
+      - "5002:4173"
+    depends_on:
+      - courses-backend
+    networks:
+      - mongo-net
 
 volumes:
   courses-backend-mongo:
