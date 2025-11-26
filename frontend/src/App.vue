@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import HelloWorld from './components/HelloWorld.vue'
+import {useAuth} from "@/composables/useAuth";
+import {onMounted, ref} from "vue";
+
+const auth = useAuth()
+
+onMounted(async () => {
+  // Must init before login() - discovers Keycloak endpoints
+  await auth.init()
+})
 </script>
 
 <template>
@@ -9,6 +18,9 @@ import HelloWorld from './components/HelloWorld.vue'
 
     <div class="wrapper">
       <HelloWorld msg="You did it!" />
+
+      <p v-if="auth.state.authenticated">Welcome, {{ auth.getUsername() }}!</p>
+      <button v-else @click="auth.login()">Log in</button>
 
       <nav>
         <RouterLink to="/">Home</RouterLink>

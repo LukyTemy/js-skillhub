@@ -2,28 +2,20 @@
 import { ref, onMounted } from 'vue'
 import config from '@/config'
 import type { Course } from '@/model/Course'
+import {useAuth} from "@/composables/useAuth";
 
 const courses = ref<Course[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
+const auth = useAuth()
 
 async function fetchCourses() {
-  loading.value = true
-  error.value = null
-  try {
-    const res = await fetch(`${config.backendUrl}/courses`)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const data = await res.json()
-    courses.value = data
-  } catch (err: any) {
-    error.value = err?.message ?? String(err)
-  } finally {
-    loading.value = false
-  }
+  const response = await auth.authorizedRequest(config.backendUrl + "/courses")
+  courses.value = response
 }
 
-onMounted(() => {
-  fetchCourses()
+onMounted(async () => {
+  await fetchCourses()
 })
 </script>
 

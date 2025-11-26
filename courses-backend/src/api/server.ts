@@ -8,6 +8,7 @@ import { apiErrorHandler } from "../middleware/error.middleware";
 import express = require("express");
 import cors from 'cors';
 import {sendMail} from "../grpc/mail.client";
+import { authenticate, hasAnyRole } from "../middleware/auth.middleware";
 
 export const server = express();
 
@@ -59,40 +60,40 @@ server.get("/", homepageController.homepage);
 // Users
 const userController = new UserController();
 const certificateController = new CertificateController();
-server.get("/users", userController.getAll);
-server.get("/users/:id", userController.getById);
-server.post("/users", userController.create);
-server.put("/users/:id", userController.update);
-server.delete("/users/:id", userController.delete);
-server.get("/users/:id/certificates", certificateController.getByUser)
+server.get("/users", authenticate, userController.getAll);
+server.get("/users/:id", authenticate, userController.getById);
+server.post("/users", authenticate, userController.create);
+server.put("/users/:id", authenticate, userController.update);
+server.delete("/users/:id", authenticate, userController.delete);
+server.get("/users/:id/certificates", authenticate, certificateController.getByUser)
 
 // Courses
 const courseController = new CourseController();
-server.post("/courses", courseController.create);
-server.get("/courses", courseController.getAll);
-server.get("/courses/:id", courseController.getById);
-server.put("/courses/:id", courseController.update);
-server.delete("/courses/:id", courseController.delete);
-server.get("/instructors/:id/courses", courseController.getByInstructor);
+server.post("/courses", authenticate, courseController.create);
+server.get("/courses", authenticate, courseController.getAll);
+server.get("/courses/:id", authenticate, courseController.getById);
+server.put("/courses/:id", authenticate, courseController.update);
+server.delete("/courses/:id", authenticate, courseController.delete);
+server.get("/instructors/:id/courses", authenticate, courseController.getByInstructor);
 
 // Courses - Lessons
-server.post("/courses/:id/lessons", courseController.addLesson);
-server.put("/courses/:id/lessons/:lessonId", courseController.updateLesson);
-server.delete("/courses/:id/lessons/:lessonId", courseController.deleteLesson);
+server.post("/courses/:id/lessons", authenticate, courseController.addLesson);
+server.put("/courses/:id/lessons/:lessonId", authenticate, courseController.updateLesson);
+server.delete("/courses/:id/lessons/:lessonId", authenticate, courseController.deleteLesson);
 
 // Enrollments
 const enrollmentController = new EnrollmentController();
-server.post("/enrollments", enrollmentController.create);
-server.get("/enrollments/:userId", enrollmentController.getByUser);
-server.delete("/enrollments/:id", enrollmentController.delete);
+server.post("/enrollments", authenticate, enrollmentController.create);
+server.get("/enrollments/:userId", authenticate, enrollmentController.getByUser);
+server.delete("/enrollments/:id", authenticate, enrollmentController.delete);
 
 // Notifications
 const notificationController = new NotificationController();
-server.get("/notifications/:id", notificationController.getByUser); // historie notifikací
-server.put("/notifications/:id/read", notificationController.markAsRead); // označení jako přečtené
+server.get("/notifications/:id", authenticate, notificationController.getByUser); // historie notifikací
+server.put("/notifications/:id/read", authenticate, notificationController.markAsRead); // označení jako přečtené
 
 // Certificates
-server.get("/certificates/:user_id/:course_id", certificateController.getUserCertificate); // stažení PDF certifikátu
+server.get("/certificates/:user_id/:course_id", authenticate, certificateController.getUserCertificate); // stažení PDF certifikátu
 
 // Middleware: Error handling
 server.use(apiErrorHandler);

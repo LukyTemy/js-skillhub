@@ -15,9 +15,7 @@ COPY . .
 
 # Pass backend URLs from docker arguments to environment variables
 ARG VITE_BACKEND_URL
-ARG VITE_STATUS_BACKEND_URL
 ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
-ENV VITE_STATUS_BACKEND_URL=${VITE_STATUS_BACKEND_URL}
 
 # Build the application
 RUN npm run build

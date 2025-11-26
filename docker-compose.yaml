@@ -8,7 +8,21 @@ services:
     volumes:
       - courses-backend-mongo:/data/db
     networks:
-      - mongo-net
+      - app-net
+
+  keycloak:
+    image: quay.io/keycloak/keycloak
+    command: start-dev --import-realm
+    ports:
+      - "8091:8080"
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=1234
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import
+    networks:
+      - app-net
+
   courses-backend:
     build:
       context: courses-backend
@@ -19,7 +33,7 @@ services:
       - CORS_ORIGIN=http://localhost:5002
       - MAIL_SERVICE_ADDRESS=mail-service:50051
     networks:
-      - mongo-net
+      - app-net
   mail-service:
     build:
       context: ./mail-service
@@ -34,7 +48,7 @@ services:
     ports:
       - "50051:50051"
     networks:
-      - mongo-net
+      - app-net
   frontend:
     build:
       context: ./frontend
@@ -45,10 +59,10 @@ services:
     depends_on:
       - courses-backend
     networks:
-      - mongo-net
+      - app-net
 
 volumes:
   courses-backend-mongo:
 
 networks:
-  mongo-net:
+  app-net:
