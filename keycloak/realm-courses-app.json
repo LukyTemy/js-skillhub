@@ -6,6 +6,8 @@
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
   "editUsernameAllowed": true,
+  "ssoSessionIdleTimeout": 1800,
+  "accessTokenLifespan": 300,
 
   "clients": [
     {
@@ -18,14 +20,28 @@
         "http://localhost:5002/*"
       ],
       "webOrigins": [
-        "http://localhost:5002"
+        "http://localhost:5002",
+        "*"
       ],
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
-      "serviceAccountsEnabled": false
+      "serviceAccountsEnabled": false,
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
     }
   ],
+
+  "roles": {
+    "client": {
+      "web-app": [
+        { "name": "student" },
+        { "name": "instructor" },
+        { "name": "admin" }
+      ]
+    }
+  },
 
   "users": [
     {
@@ -41,22 +57,28 @@
           "value": "student",
           "temporary": false
         }
-      ]
+      ],
+      "clientRoles": {
+        "web-app": ["student"]
+      }
     },
     {
-      "username": "admin1",
+      "username": "instructor1",
       "enabled": true,
       "emailVerified": true,
-      "firstName": "Admin",
+      "firstName": "Instructor",
       "lastName": "One",
-      "email": "admin1@example.com",
+      "email": "instructor1@example.com",
       "credentials": [
         {
           "type": "password",
-          "value": "admin",
+          "value": "instructor",
           "temporary": false
         }
-      ]
+      ],
+      "clientRoles": {
+        "web-app": ["instructor"]
+      }
     }
   ]
 }

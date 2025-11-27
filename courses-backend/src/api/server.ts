@@ -69,7 +69,7 @@ server.get("/users/:id/certificates", authenticate, certificateController.getByU
 
 // Courses
 const courseController = new CourseController();
-server.post("/courses", authenticate, courseController.create);
+server.post("/courses", authenticate, hasAnyRole('instructor'), courseController.create);
 server.get("/courses", authenticate, courseController.getAll);
 server.get("/courses/:id", authenticate, courseController.getById);
 server.put("/courses/:id", authenticate, courseController.update);

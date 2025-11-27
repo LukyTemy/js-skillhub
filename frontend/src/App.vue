@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import HelloWorld from './components/HelloWorld.vue'
-import {useAuth} from "@/composables/useAuth";
-import {onMounted, ref} from "vue";
+import { useAuth } from "@/composables/useAuth";
+import { onMounted } from "vue";
 
 const auth = useAuth()
 
 onMounted(async () => {
-  // Must init before login() - discovers Keycloak endpoints
   await auth.init()
 })
 </script>
@@ -19,8 +18,15 @@ onMounted(async () => {
     <div class="wrapper">
       <HelloWorld msg="You did it!" />
 
-      <p v-if="auth.state.authenticated">Welcome, {{ auth.getUsername() }}!</p>
-      <button v-else @click="auth.login()">Log in</button>
+      <div class="auth" v-if="auth.state.isReady">
+        <p v-if="auth.state.authenticated">Welcome, {{ auth.getUsername() }}!</p>
+        <button v-if="auth.state.authenticated" @click="auth.logout()">Log out</button>
+        <button v-else @click="auth.login()">Log in</button>
+      </div>
+
+      <div class="auth" v-else>
+        <p>Loading session...</p>
+      </div>
 
       <nav>
         <RouterLink to="/">Home</RouterLink>
@@ -34,6 +40,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+/* ... tvůj původní styl ... */
 header {
   line-height: 1.5;
   max-height: 100vh;
@@ -67,6 +74,12 @@ nav a {
 
 nav a:first-of-type {
   border: 0;
+}
+
+.auth {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 @media (min-width: 1024px) {

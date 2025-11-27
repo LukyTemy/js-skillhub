@@ -32,6 +32,9 @@ services:
       - MONGO_URL=mongodb://mongo:27017/courses-backend
       - CORS_ORIGIN=http://localhost:5002
       - MAIL_SERVICE_ADDRESS=mail-service:50051
+      - KEYCLOAK_BASE_URL=${KEYCLOAK_BASE_URL}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
     networks:
       - app-net
   mail-service:

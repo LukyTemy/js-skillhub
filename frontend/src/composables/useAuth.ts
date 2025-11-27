@@ -4,138 +4,237 @@ import * as client from 'openid-client';
 import { jwtDecode } from "jwt-decode";
 import config from "@/config";
 
-// Typed shape of the decoded Keycloak token (only fields we use)
+// --- Types ---
 interface KeycloakTokenPayload {
     preferred_username?: string;
     resource_access?: Record<string, { roles?: string[] }>;
-    // ...other claims are ignored
+    exp?: number;
 }
 
-// State for auth
+// --- State ---
 const state = reactive<{
     accessToken: string | null;
+    refreshToken: string | null;
     user: KeycloakTokenPayload | null;
     authenticated: boolean;
-}>(
-    {
-        accessToken: null,
-        user: null,
-        authenticated: false,
-    }
-);
+    isReady: boolean;
+}>({
+    accessToken: null,
+    refreshToken: null,
+    user: null,
+    authenticated: false,
+    isReady: false,
+});
 
 const error = ref<string | null>(null);
-let codeChallenge: string | null = null;
-let authConfig: client.Configuration;
+
+let authConfig: client.Configuration | null = null;
+let initPromise: Promise<void> | null = null;
+let isProcessingCallback = false;
 
 export function useAuth() {
 
-    const init = async () => {
-        if (!config.keycloak.baseUrl || !config.keycloak.realm) {
-            console.error('Keycloak configuration is missing baseUrl or realm', config.keycloak);
-            throw new Error('Keycloak is not configured correctly (baseUrl/realm missing)');
+    const tokenEndpoint = () => `${config.keycloak.baseUrl.replace(/\/$/, '')}/realms/${config.keycloak.realm}/protocol/openid-connect/token`;
+
+    const decodePayload = (token: string | null): KeycloakTokenPayload | null => {
+        if (!token) return null;
+        try {
+            return jwtDecode<KeycloakTokenPayload>(token);
+        } catch (e) {
+            return null;
+        }
+    };
+
+    const isTokenValid = (token: string | null, marginSeconds = 10): boolean => {
+        const payload = decodePayload(token);
+        if (!payload || !payload.exp) return false;
+        return payload.exp * 1000 > (Date.now() + marginSeconds * 1000);
+    };
+
+    const setSession = (access: string, refresh?: string) => {
+        state.accessToken = access;
+        state.user = decodePayload(access);
+        state.authenticated = true;
+
+        if (refresh) {
+            state.refreshToken = refresh;
+            localStorage.setItem('refresh_token', refresh);
+        }
+    };
+
+    const clearSession = () => {
+        localStorage.removeItem('refresh_token');
+        state.accessToken = null;
+        state.refreshToken = null;
+        state.user = null;
+        state.authenticated = false;
+    };
+
+    const refreshAccessToken = async (): Promise<boolean> => {
+        const rt = state.refreshToken ?? localStorage.getItem('refresh_token');
+        if (!rt) return false;
+
+        try {
+            const body = new URLSearchParams();
+            body.set('grant_type', 'refresh_token');
+            body.set('refresh_token', rt);
+            body.set('client_id', config.keycloak.clientId!);
+
+            const response = await fetch(tokenEndpoint(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: body.toString(),
+            });
+
+            if (!response.ok) {
+                clearSession();
+                return false;
+            }
+
+            const data = await response.json();
+            setSession(data.access_token, data.refresh_token);
+            return true;
+
+        } catch (e) {
+            console.error("Refresh failed", e);
+            clearSession();
+            return false;
+        }
+    };
+
+    const _performInit = async () => {
+        const storedRefresh = localStorage.getItem('refresh_token');
+
+        if (storedRefresh) {
+            await refreshAccessToken();
+        } else {
+            clearSession();
         }
 
-        const issuerUri = `${config.keycloak.baseUrl}/realms/${config.keycloak.realm}`;
-        authConfig = await client.discovery(
-            new URL(issuerUri),
-            config.keycloak.clientId!,
-            undefined,
-            undefined,
-            { execute: [client.allowInsecureRequests] } // allow running Keycloak on localhost
-        );
+        if (config.keycloak.baseUrl && config.keycloak.realm) {
+            const issuerUri = `${config.keycloak.baseUrl}/realms/${config.keycloak.realm}`;
+            try {
+                authConfig = await client.discovery(
+                    new URL(issuerUri),
+                    config.keycloak.clientId!,
+                    undefined,
+                    undefined,
+                    { execute: [client.allowInsecureRequests] }
+                );
+            } catch (e) {
+                console.warn("Keycloak discovery failed.");
+            }
+        }
+
+        state.isReady = true;
+    };
+
+    const init = () => {
+        if (!initPromise) {
+            initPromise = _performInit();
+        }
+        return initPromise;
     };
 
     const login = async () => {
-        if (!authConfig) {
-            await init();
-        }
+        await init();
+        if (!authConfig) throw new Error("Auth config not loaded");
 
-        // Generate and persist PKCE code verifier
         const codeVerifier = client.randomPKCECodeVerifier();
         localStorage.setItem('code_verifier', codeVerifier);
-
-        const storedVerifier = localStorage.getItem('code_verifier');
-        if (!storedVerifier) {
-            throw new Error('Failed to initialize PKCE code verifier');
-        }
-
-        codeChallenge = await client.calculatePKCECodeChallenge(storedVerifier);
+        const codeChallenge = await client.calculatePKCECodeChallenge(codeVerifier);
 
         const parameters: Record<string, string> = {
             redirect_uri: config.keycloak.redirectUri,
             code_challenge: codeChallenge,
             code_challenge_method: 'S256',
+            scope: 'openid profile email'
         };
 
         const randomState = client.randomState();
         localStorage.setItem('state', randomState);
         parameters.state = randomState;
 
-        const redirectTo: URL = client.buildAuthorizationUrl(authConfig!, parameters);
-        window.location.href = redirectTo.href; // Redirect to Keycloak login page
+        const redirectTo = client.buildAuthorizationUrl(authConfig, parameters);
+        window.location.href = redirectTo.href;
     };
 
-    /**
-     * Handle the callback after login
-     */
     const handleCallback = async (callbackUrl: string) => {
-        // Ensure auth config is initialized (discovery)
-        if (!authConfig) {
-            await init();
-        }
+        if (isProcessingCallback) return;
+        isProcessingCallback = true;
 
         const pkceCodeVerifier = localStorage.getItem('code_verifier') ?? undefined;
         const expectedState = localStorage.getItem('state') ?? undefined;
 
-        const tokens: client.TokenEndpointResponse = await client.authorizationCodeGrant(
-            authConfig,
-            new URL(callbackUrl),
-            {
-                pkceCodeVerifier,
-                expectedState,
-            },
-        );
+        await init();
 
-        state.authenticated = true;
-        state.accessToken = tokens.access_token ?? null;
+        if (!authConfig) {
+            isProcessingCallback = false;
+            throw new Error("Auth config invalid");
+        }
 
-        if (tokens.access_token) {
-            state.user = jwtDecode<KeycloakTokenPayload>(tokens.access_token);
-        } else {
-            state.user = null;
+        try {
+            const tokens = await client.authorizationCodeGrant(
+                authConfig,
+                new URL(callbackUrl),
+                {
+                    pkceCodeVerifier,
+                    expectedState,
+                },
+                {
+                    redirect_uri: config.keycloak.redirectUri,
+                }
+            );
+
+            if (tokens.access_token) {
+                setSession(tokens.access_token, tokens.refresh_token);
+
+                localStorage.removeItem('code_verifier');
+                localStorage.removeItem('state');
+
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        } catch (e) {
+            console.error("Login callback error:", e);
+            error.value = "Login failed";
+            throw e;
+        } finally {
+            // isProcessingCallback = false; // U callbacku obvykle nechceme odemykat, aby nedošlo k double-submitu při redirectu
         }
     };
 
-    /**
-     * Make an authenticated request to the backend
-     */
     const authorizedRequest = async (endpoint: string, options = {}) => {
-        if (!state.accessToken) {
-            error.value = 'Not authenticated';
-            throw new Error(error.value);
+        if (!state.accessToken || !isTokenValid(state.accessToken, 10)) {
+            const refreshed = await refreshAccessToken();
+            if (!refreshed) {
+                throw new Error("Session expired");
+            }
         }
 
-        const response = await axios({
-            url: `${endpoint}`,
-            headers: {
-                Authorization: `Bearer ${state.accessToken}`,
-            },
+        return axios({
+            url: endpoint,
+            headers: { Authorization: `Bearer ${state.accessToken}` },
             ...options,
-        });
-        return response.data;
+        }).then(r => r.data);
     };
 
-    const getUsername = () => {
-        return state.user?.preferred_username;
-    };
+    const getUsername = () => state.user?.preferred_username;
 
     const getUserRoles = (): string[] => {
-        if (!state.user) {
-            return [];
-        }
-        const clientAccess = state.user.resource_access?.[config.keycloak.clientId];
+        if (!state.user) return [];
+        const clientAccess = state.user.resource_access?.[config.keycloak.clientId!];
         return clientAccess?.roles ?? [];
+    };
+
+    const logout = (redirectToKeycloak = true) => {
+        clearSession();
+        localStorage.removeItem('code_verifier');
+        localStorage.removeItem('state');
+
+        if (redirectToKeycloak && config.keycloak.baseUrl) {
+            const logoutUrl = `${config.keycloak.baseUrl}/realms/${config.keycloak.realm}/protocol/openid-connect/logout?redirect_uri=${encodeURIComponent(location.origin)}`;
+            window.location.href = logoutUrl;
+        }
     };
 
     return {
@@ -145,7 +244,9 @@ export function useAuth() {
         login,
         handleCallback,
         authorizedRequest,
+        refreshAccessToken,
         getUsername,
         getUserRoles,
+        logout,
     };
 }
