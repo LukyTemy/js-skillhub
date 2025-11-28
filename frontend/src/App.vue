@@ -1,114 +1,63 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
+import { RouterView } from 'vue-router'
+import Navbar from '@/components/Navbar.vue' // Importujeme komponentu
 import { useAuth } from "@/composables/useAuth";
 import { onMounted } from "vue";
 
 const auth = useAuth()
 
 onMounted(async () => {
+  // Inicializace auth je stále zde, protože je to vstupní bod aplikace
   await auth.init()
 })
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
+  <Navbar />
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-
-      <div class="auth" v-if="auth.state.isReady">
-        <p v-if="auth.state.authenticated">Welcome, {{ auth.getUsername() }}!</p>
-        <button v-if="auth.state.authenticated" @click="auth.logout()">Log out</button>
-        <div v-else>
-          <button @click="auth.login()">Log in</button>
-          <button @click="auth.register()">Register</button>
-        </div>
-      </div>
-
-      <div class="auth" v-else>
-        <p>Loading session...</p>
-      </div>
-
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/courses">Courses</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
+  <div class="main-layout">
+    <div class="container">
+      <RouterView />
     </div>
-  </header>
-
-  <RouterView />
+  </div>
 </template>
 
-<style scoped>
-/* ... tvůj původní styl ... */
-header {
-  line-height: 1.5;
-  max-height: 100vh;
+<style>
+/* --- Global Variables (Tyto musí být zde, aby je viděla celá apka) --- */
+:root {
+  --color-bg: #ffffff;
+  --color-bg-secondary: #f8fafc;
+  --color-text-main: #0f172a;
+  --color-text-muted: #64748b;
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+  --color-border: #e2e8f0;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --radius: 8px;
 }
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
+/* --- Layout --- */
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text-main);
 }
 
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
+/* Globální kontejner (použitý v Navbaru i v Main Layoutu) */
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
 }
 
-nav a.router-link-exact-active {
-  color: var(--color-text);
+.main-layout {
+  padding-top: 80px; /* Kompenzace za Navbar */
+  padding-bottom: 4rem;
+  min-height: 100vh;
 }
 
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
-}
-
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
-}
-
-nav a:first-of-type {
-  border: 0;
-}
-
-.auth {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
-}
+/* Reset tlačítek globálně */
+button { font-family: inherit; border: none; background: none; cursor: pointer; padding: 0; }
 </style>

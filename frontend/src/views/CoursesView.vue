@@ -16,7 +16,6 @@ const isInstructor = computed(() => auth.isInstructor ? auth.isInstructor() : fa
 async function fetchCourses() {
   loading.value = true;
   error.value = null;
-
   try {
     const response = await auth.authorizedRequest(config.backendUrl + "/courses")
     courses.value = response
@@ -34,75 +33,154 @@ function goToCreateCourse() {
 
 onMounted(async () => {
   await auth.init();
-
-  if (auth.state.authenticated) {
-    await fetchCourses();
-  }
+  if (auth.state.authenticated) await fetchCourses();
 })
 </script>
 
 <template>
-  <main>
-    <header class="courses-header">
-      <h1>Courses</h1>
-      <button
-        v-if="auth.state.authenticated && isInstructor"
-        type="button"
-        class="btn btn-primary"
-        @click="goToCreateCourse"
-      >
-        Přidat kurz
+  <main class="courses-view">
+
+    <header class="page-header">
+      <div class="header-text">
+        <h1>Available Courses</h1>
+        <p class="subtitle">Explore and learn from our wide range of topics.</p>
+      </div>
+
+      <button v-if="auth.state.authenticated && isInstructor" class="btn btn-primary btn-create" @click="goToCreateCourse">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        New Course
       </button>
     </header>
 
-    <button v-if="error" @click="fetchCourses">Try Again</button>
+    <div v-if="loading" class="state-msg">Loading courses...</div>
+    <div v-if="error" class="state-msg error">⚠️ {{ error }} <button @click="fetchCourses">Retry</button></div>
 
-    <div v-if="loading">Loading courses...</div>
-
-    <div v-if="error" class="error">
-      Error: {{ error }}
+    <div v-if="!loading && !error && courses.length === 0" class="state-msg empty">
+      <div v-if="auth.state.authenticated">
+        <h3>No courses found</h3>
+        <p>It looks like there are no courses yet.</p>
+      </div>
+      <div v-else>
+        <h3>Welcome to our Platform</h3>
+        <p>Please <a href="#" @click.prevent="auth.login()">log in</a> to view the available courses.</p>
+      </div>
     </div>
 
-    <ul v-if="!loading && !error && courses.length > 0">
-      <li v-for="c in courses" :key="c._id">
-        <h3>{{ c.title }}</h3>
-        <p v-if="c.description">{{ c.description }}</p>
-        <small>Category: {{ c.category ?? '—' }}</small>
-      </li>
-    </ul>
-
-    <div v-if="!loading && !error && courses.length === 0">
-      <p v-if="auth.state.authenticated">No courses found.</p>
-      <p v-else>Please <a href="#" @click.prevent="auth.login()">log in</a> to see the courses.</p>
+    <div v-if="!loading && !error && courses.length > 0" class="courses-grid">
+      <article v-for="c in courses" :key="c._id" class="course-card">
+        <div class="card-content">
+          <span class="badge">{{ c.category ?? 'General' }}</span>
+          <h3>{{ c.title }}</h3>
+          <p class="description">{{ c.description }}</p>
+        </div>
+        <div class="card-footer">
+          <button class="btn-link">View Details →</button>
+        </div>
+      </article>
     </div>
+
   </main>
 </template>
 
 <style scoped>
-.courses-header {
+/* --- Header --- */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end; /* Zarovnání k dolnímu okraji textu */
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+}
+
+.subtitle {
+  margin: 0.5rem 0 0 0;
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+}
+
+.btn-create {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
 }
 
-.btn {
-  border-radius: 9999px;
-  padding: 0.4rem 1rem;
+/* --- Grid --- */
+.courses-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 sloupce */
+  gap: 2rem;
+}
+
+/* --- Course Card --- */
+.course-card {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
+.course-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: #cbd5e1;
+}
+
+.card-content { padding: 1.5rem; flex: 1; }
+
+.badge {
+  display: inline-block;
+  background-color: #eff6ff;
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.75rem;
+  border-radius: 99px;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.course-card h3 { margin: 0 0 0.75rem 0; font-size: 1.25rem; font-weight: 600; line-height: 1.3; }
+.description { color: var(--color-text-muted); font-size: 0.95rem; line-height: 1.6; margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+.card-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--color-bg-secondary);
+  background-color: #fcfcfc;
+}
+
+.btn-link {
+  color: var(--color-primary);
   font-weight: 600;
   font-size: 0.9rem;
-  border: none;
-  cursor: pointer;
+  text-decoration: none;
+  background: none; border: none; padding: 0; cursor: pointer;
 }
+.btn-link:hover { text-decoration: underline; }
 
-.btn-primary {
-  background: linear-gradient(to right, #2563eb, #4f46e5);
-  color: white;
+/* --- States --- */
+.state-msg { text-align: center; padding: 3rem 0; color: var(--color-text-muted); }
+.state-msg.error { color: #ef4444; }
+.state-msg a { color: var(--color-primary); text-decoration: none; font-weight: 600; }
+
+/* --- Responsivita --- */
+@media (max-width: 900px) {
+  .courses-grid { grid-template-columns: repeat(2, 1fr); }
 }
-
-.error {
-  color: red;
-  margin: 1rem 0;
-  font-weight: bold;
+@media (max-width: 600px) {
+  .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .courses-grid { grid-template-columns: 1fr; }
 }
 </style>
