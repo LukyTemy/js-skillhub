@@ -15,12 +15,14 @@ interface KeycloakTokenPayload {
 const state = reactive<{
     accessToken: string | null;
     refreshToken: string | null;
+    idToken: string | null;
     user: KeycloakTokenPayload | null;
     authenticated: boolean;
     isReady: boolean;
 }>({
     accessToken: null,
     refreshToken: null,
+    idToken: null,
     user: null,
     authenticated: false,
     isReady: false,
@@ -51,7 +53,7 @@ export function useAuth() {
         return payload.exp * 1000 > (Date.now() + marginSeconds * 1000);
     };
 
-    const setSession = (access: string, refresh?: string) => {
+    const setSession = (access: string, refresh?: string, idToken?: string) => {
         state.accessToken = access;
         state.user = decodePayload(access);
         state.authenticated = true;
@@ -60,12 +62,19 @@ export function useAuth() {
             state.refreshToken = refresh;
             localStorage.setItem('refresh_token', refresh);
         }
+
+        if (idToken) {
+            state.idToken = idToken;
+            localStorage.setItem('id_token', idToken);
+        }
     };
 
     const clearSession = () => {
         localStorage.removeItem('refresh_token');
+        localStorage.removeItem('id_token');
         state.accessToken = null;
         state.refreshToken = null;
+        state.idToken = null;
         state.user = null;
         state.authenticated = false;
     };
@@ -92,7 +101,7 @@ export function useAuth() {
             }
 
             const data = await response.json();
-            setSession(data.access_token, data.refresh_token);
+            setSession(data.access_token, data.refresh_token, data.id_token);
             return true;
 
         } catch (e) {
@@ -104,6 +113,8 @@ export function useAuth() {
 
     const _performInit = async () => {
         const storedRefresh = localStorage.getItem('refresh_token');
+        const storedIdToken = localStorage.getItem('id_token');
+        if (storedIdToken) state.idToken = storedIdToken;
 
         if (storedRefresh) {
             await refreshAccessToken();
@@ -187,7 +198,7 @@ export function useAuth() {
             );
 
             if (tokens.access_token) {
-                setSession(tokens.access_token, tokens.refresh_token);
+                setSession(tokens.access_token, tokens.refresh_token, tokens.id_token);
 
                 localStorage.removeItem('code_verifier');
                 localStorage.removeItem('state');
@@ -199,7 +210,7 @@ export function useAuth() {
             error.value = "Login failed";
             throw e;
         } finally {
-            // isProcessingCallback = false; // U callbacku obvykle nechceme odemykat, aby nedošlo k double-submitu při redirectu
+            // isProcessingCallback = false;
         }
     };
 
@@ -227,13 +238,28 @@ export function useAuth() {
     };
 
     const logout = (redirectToKeycloak = true) => {
+        const idTokenToHint = state.idToken ?? localStorage.getItem('id_token');
+
         clearSession();
         localStorage.removeItem('code_verifier');
         localStorage.removeItem('state');
 
         if (redirectToKeycloak && config.keycloak.baseUrl) {
-            const logoutUrl = `${config.keycloak.baseUrl}/realms/${config.keycloak.realm}/protocol/openid-connect/logout?redirect_uri=${encodeURIComponent(location.origin)}`;
-            window.location.href = logoutUrl;
+            const postLogoutRedirect = location.origin + '/';
+
+            const baseUrl = `${config.keycloak.baseUrl.replace(/\/$/, '')}/realms/${config.keycloak.realm}/protocol/openid-connect/logout`;
+
+            const url = new URL(baseUrl);
+
+            url.searchParams.set('post_logout_redirect_uri', postLogoutRedirect);
+
+            if (idTokenToHint) {
+                url.searchParams.set('id_token_hint', idTokenToHint);
+            } else {
+                url.searchParams.set('client_id', config.keycloak.clientId!);
+            }
+
+            window.location.href = url.toString();
         }
     };
 
