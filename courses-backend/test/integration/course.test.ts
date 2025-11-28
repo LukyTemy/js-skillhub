@@ -1,9 +1,23 @@
-import {beforeEach, describe, expect, it} from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
+
+// 1. MOCK AUTH MIDDLEWARE
+vi.mock("../../src/middleware/auth.middleware", () => ({
+    authenticate: (req: any, res: any, next: any) => {
+        req.user = {
+            sub: "mock-instructor-uuid", // ID, které musí existovat v users kolekci
+            email: "instructor@test.com",
+            roles: ["instructor"] // Musí mít roli instructor pro create
+        };
+        next();
+    },
+    hasAnyRole: (...roles: string[]) => (req: any, res: any, next: any) => next()
+}));
+
 import request from "../request";
 import mongo from "../../src/database/mongo";
-import {UserRole} from "../../src/database/models/user.model";
-import {ObjectId} from "mongodb";
-import {ContentType, CourseDto, LessonDto} from "../../src/types/dto/course.dto";
+import { UserRole } from "../../src/types/dto/user.dto"; // Pozor na správný import Enumu
+import { ObjectId } from "mongodb";
+import { ContentType, CourseDto, LessonDto } from "../../src/types/dto/course.dto";
 
 describe('Course Endpoints', () => {
     let instructorId: ObjectId;
@@ -13,11 +27,12 @@ describe('Course Endpoints', () => {
         await mongo.db.collection("users").deleteMany({});
         await mongo.db.collection("courses").deleteMany({});
 
+        // 2. Vytvoření Shadow Usera (Instruktora)
         const instructor = {
             _id: new ObjectId("a00000000000000000000001"),
+            keycloakUuid: "mock-instructor-uuid", // Musí sedět s mockem nahoře!
             name: 'Test Instructor',
             email: 'instructor@test.com',
-            password: 'password',
             role: UserRole.Instructor
         };
         const result = await mongo.db.collection("users").insertOne(instructor);
@@ -34,10 +49,13 @@ describe('Course Endpoints', () => {
         courseId = courseResult.insertedId;
     });
 
+    afterEach(() => {
+        vi.clearAllMocks();
+    });
+
     describe('GET /courses', () => {
         it('should return all courses', async () => {
             const res = await request.get('/courses');
-            console.log(res.body)
             expect(res.status).toBe(200);
             expect(res.body).toBeInstanceOf(Array);
             expect(res.body.length).toBe(1);
@@ -48,7 +66,6 @@ describe('Course Endpoints', () => {
     describe('GET /courses/:id', () => {
         it('should return a course by id', async () => {
             const res = await request.get(`/courses/${courseId}`);
-            console.log(res.body)
             expect(res.status).toBe(200);
             expect(res.body.title).toBe("Initial Course");
         });
@@ -56,25 +73,25 @@ describe('Course Endpoints', () => {
         it('should return 404 for non-existent course', async () => {
             const nonExistentId = new ObjectId();
             const res = await request.get(`/courses/${nonExistentId}`);
-            console.log(res.body)
             expect(res.status).toBe(404);
         });
     });
 
     describe('POST /courses', () => {
-        it('should create a new course', async () => {
-            const newCourse: Omit<CourseDto, 'instructorId'> = {
+        it('should create a new course linked to logged instructor', async () => {
+            // Neposíláme instructorId, backend si ho vezme z tokenu (mockovaného)
+            const newCourse = {
                 title: "New Test Course",
                 description: "This is a brand new course for testing.",
                 category: "Development",
                 lessons: []
             };
 
-            const res = await request.post('/courses').send(newCourse as any);
-            console.log(res.body)
+            const res = await request.post('/courses').send(newCourse);
             expect(res.status).toBe(201);
             expect(res.body.title).toBe(newCourse.title);
-            expect(res.body.instructorId).toBeDefined();
+            // Ověříme, že backend správně přiřadil ID instruktora z DB
+            expect(res.body.instructorId).toBe(instructorId.toString());
 
             const courses = await mongo.db.collection("courses").find().toArray();
             expect(courses.length).toBe(2);
@@ -83,16 +100,15 @@ describe('Course Endpoints', () => {
 
     describe('PUT /courses/:id', () => {
         it('should update a course', async () => {
-            const updatedCourse: CourseDto = {
+            const updatedCourse = {
                 title: "Updated Course Title",
                 description: "A course for testing purposes.",
                 category: "Testing",
-                instructorId: instructorId,
+                // instructorId nemusíme posílat při update, pokud ho neměníme
                 lessons: []
             };
 
             const res = await request.put(`/courses/${courseId}`).send(updatedCourse);
-            console.log(res.body)
             expect(res.status).toBe(202);
             expect(res.body.title).toBe(updatedCourse.title);
         });
@@ -101,7 +117,6 @@ describe('Course Endpoints', () => {
     describe('DELETE /courses/:id', () => {
         it('should delete a course', async () => {
             const res = await request.delete(`/courses/${courseId}`);
-            console.log(res.body)
             expect(res.status).toBe(204);
 
             const course = await mongo.db.collection("courses").findOne({_id: courseId});
@@ -111,7 +126,7 @@ describe('Course Endpoints', () => {
 
     describe('Lesson Endpoints', () => {
         const newLesson: LessonDto = {
-            lessonId: new ObjectId(),
+            lessonId: new ObjectId(), // Backend by měl ideálně generovat ID sám, ale pro test OK
             title: "First Lesson",
             content: [{
                 type: ContentType.Text,
@@ -123,7 +138,6 @@ describe('Course Endpoints', () => {
         describe('POST /courses/:id/lessons', () => {
             it('should add a lesson to a course', async () => {
                 const res = await request.post(`/courses/${courseId}/lessons`).send(newLesson);
-                console.log(res.body)
                 expect(res.status).toBe(201);
                 expect(res.body.lessons).toHaveLength(1);
                 expect(res.body.lessons[0].title).toBe(newLesson.title);
@@ -136,7 +150,6 @@ describe('Course Endpoints', () => {
 
                 const updatedLesson = { ...newLesson, title: "Updated Lesson Title" };
                 const res = await request.put(`/courses/${courseId}/lessons/${newLesson.lessonId}`).send(updatedLesson);
-                console.log(res.body)
                 expect(res.status).toBe(202);
                 expect(res.body.lessons[0].title).toBe("Updated Lesson Title");
             });
@@ -147,7 +160,6 @@ describe('Course Endpoints', () => {
                 await request.post(`/courses/${courseId}/lessons`).send(newLesson);
 
                 const res = await request.delete(`/courses/${courseId}/lessons/${newLesson.lessonId}`);
-                console.log(res.body)
                 expect(res.status).toBe(202);
                 expect(res.body.lessons).toHaveLength(0);
             });

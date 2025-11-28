@@ -1,4 +1,18 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
+
+// 1. MOCK AUTH MIDDLEWARE
+vi.mock("../../src/middleware/auth.middleware", () => ({
+    authenticate: (req: any, res: any, next: any) => {
+        req.user = {
+            sub: "mock-cert-uuid",
+            email: "cert@test.com",
+            roles: ["student"]
+        };
+        next();
+    },
+    hasAnyRole: (...roles: string[]) => (req: any, res: any, next: any) => next()
+}));
+
 import request from "../request";
 import mongo from "../../src/database/mongo";
 import { ObjectId } from "mongodb";
@@ -14,9 +28,9 @@ describe('Certificate Endpoints', () => {
 
         const user = {
             _id: new ObjectId("c00000000000000000000001"),
+            keycloakUuid: "mock-cert-uuid",
             name: 'Cert User',
             email: 'cert@test.com',
-            password: 'password',
             role: 'student'
         };
         const userRes = await mongo.db.collection("users").insertOne(user);
@@ -33,6 +47,10 @@ describe('Certificate Endpoints', () => {
         courseId = courseRes.insertedId;
     });
 
+    afterEach(() => {
+        vi.clearAllMocks();
+    });
+
     it('GET /certificates should return list of certificates (200)', async () => {
         await mongo.db.collection("certificates").insertOne({
             userId: userId,
@@ -42,7 +60,6 @@ describe('Certificate Endpoints', () => {
         });
 
         const res = await request.get(`/certificates/${userId}/${courseId}`);
-        console.log(res.body)
         expect(res.status).toBe(200);
         expect(res.body).toBeDefined();
         expect(res.body.fileUrl).toBe('http://example.com/cert.pdf');

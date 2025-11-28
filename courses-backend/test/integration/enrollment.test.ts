@@ -1,4 +1,18 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
+
+// 1. MOCK AUTH MIDDLEWARE
+vi.mock("../../src/middleware/auth.middleware", () => ({
+    authenticate: (req: any, res: any, next: any) => {
+        req.user = {
+            sub: "mock-student-uuid",
+            email: "student1@test.com",
+            roles: ["student"]
+        };
+        next();
+    },
+    hasAnyRole: (...roles: string[]) => (req: any, res: any, next: any) => next()
+}));
+
 import request from "../request";
 import mongo from "../../src/database/mongo";
 import { ObjectId } from "mongodb";
@@ -13,11 +27,12 @@ describe('Enrollment Endpoints', () => {
         await mongo.db.collection("courses").deleteMany({});
         await mongo.db.collection("enrollments").deleteMany({});
 
+        // 2. Vytvoření uživatele s Keycloak UUID (bez hesla)
         const user = {
             _id: new ObjectId("b00000000000000000000001"),
+            keycloakUuid: "mock-student-uuid", // Musí sedět s mockem
             name: 'Student One',
             email: 'student1@test.com',
-            password: 'password',
             role: 'student'
         };
         const userRes = await mongo.db.collection("users").insertOne(user);
@@ -34,6 +49,10 @@ describe('Enrollment Endpoints', () => {
         courseId = courseRes.insertedId;
     });
 
+    afterEach(() => {
+        vi.clearAllMocks();
+    });
+
     it('POST /enrollments should create an enrollment (201)', async () => {
         const payload = {
             userId: userId.toString(),
@@ -42,7 +61,6 @@ describe('Enrollment Endpoints', () => {
         };
 
         const res = await request.post('/enrollments').send(payload);
-        console.log(res.body)
         expect(res.status).toBe(201);
         expect(res.body.userId).toBe(userId.toString());
         expect(res.body.courseId).toBe(courseId.toString());
@@ -63,7 +81,6 @@ describe('Enrollment Endpoints', () => {
         await mongo.db.collection("enrollments").insertOne(insert);
 
         const res = await request.get(`/enrollments/${userId}`);
-        console.log(res.body)
         expect(res.status).toBe(200);
         expect(res.body).toBeInstanceOf(Array);
         expect(res.body.length).toBe(1);
@@ -80,11 +97,9 @@ describe('Enrollment Endpoints', () => {
 
         const id = ins.insertedId;
         const res = await request.delete(`/enrollments/${id}`);
-        console.log(res.body)
         expect(res.status).toBe(204);
 
         const found = await mongo.db.collection("enrollments").findOne({ _id: id });
         expect(found).toBeNull();
     });
 });
-
