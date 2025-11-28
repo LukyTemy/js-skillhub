@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import config from '@/config'
 import type { Course } from '@/model/Course'
 import { useAuth } from "@/composables/useAuth";
@@ -8,40 +9,51 @@ const courses = ref<Course[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const auth = useAuth()
+const router = useRouter()
+
+const isInstructor = computed(() => auth.isInstructor ? auth.isInstructor() : false)
 
 async function fetchCourses() {
   loading.value = true;
-  error.value = null; // Reset chyby před novým pokusem
+  error.value = null;
 
   try {
-    // Tady voláme authorizedRequest, který sám řeší refresh tokenu pokud je potřeba
     const response = await auth.authorizedRequest(config.backendUrl + "/courses")
     courses.value = response
   } catch (e: any) {
     console.error("Failed to fetch courses:", e);
-    // Zobrazíme chybu uživateli
     error.value = e.message || "Failed to load courses";
   } finally {
     loading.value = false;
   }
 }
 
+function goToCreateCourse() {
+  router.push({ name: 'course-create' })
+}
+
 onMounted(async () => {
-  // Počkáme na inicializaci auth (načtení tokenů, refresh)
   await auth.init();
 
   if (auth.state.authenticated) {
     await fetchCourses();
-  } else {
-    // Volitelné: Pokud uživatel není přihlášen, můžeme ho vyzvat nebo přesměrovat
-    // error.value = "Please log in to view courses.";
   }
 })
 </script>
 
 <template>
   <main>
-    <h1>Courses</h1>
+    <header class="courses-header">
+      <h1>Courses</h1>
+      <button
+        v-if="auth.state.authenticated && isInstructor"
+        type="button"
+        class="btn btn-primary"
+        @click="goToCreateCourse"
+      >
+        Přidat kurz
+      </button>
+    </header>
 
     <button v-if="error" @click="fetchCourses">Try Again</button>
 
@@ -67,6 +79,27 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.courses-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.btn {
+  border-radius: 9999px;
+  padding: 0.4rem 1rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: linear-gradient(to right, #2563eb, #4f46e5);
+  color: white;
+}
+
 .error {
   color: red;
   margin: 1rem 0;

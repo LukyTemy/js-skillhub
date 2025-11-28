@@ -9,6 +9,7 @@ interface KeycloakTokenPayload {
     preferred_username?: string;
     resource_access?: Record<string, { roles?: string[] }>;
     exp?: number;
+    sub?: string;
 }
 
 // --- State ---
@@ -62,7 +63,6 @@ export function useAuth() {
             state.refreshToken = refresh;
             localStorage.setItem('refresh_token', refresh);
         }
-
         if (idToken) {
             state.idToken = idToken;
             localStorage.setItem('id_token', idToken);
@@ -103,7 +103,6 @@ export function useAuth() {
             const data = await response.json();
             setSession(data.access_token, data.refresh_token, data.id_token);
             return true;
-
         } catch (e) {
             console.error("Refresh failed", e);
             clearSession();
@@ -136,7 +135,6 @@ export function useAuth() {
                 console.warn("Keycloak discovery failed.");
             }
         }
-
         state.isReady = true;
     };
 
@@ -160,6 +158,30 @@ export function useAuth() {
             code_challenge: codeChallenge,
             code_challenge_method: 'S256',
             scope: 'openid profile email'
+        };
+
+        const randomState = client.randomState();
+        localStorage.setItem('state', randomState);
+        parameters.state = randomState;
+
+        const redirectTo = client.buildAuthorizationUrl(authConfig, parameters);
+        window.location.href = redirectTo.href;
+    };
+
+    const register = async () => {
+        await init();
+        if (!authConfig) throw new Error("Auth config not loaded");
+
+        const codeVerifier = client.randomPKCECodeVerifier();
+        localStorage.setItem('code_verifier', codeVerifier);
+        const codeChallenge = await client.calculatePKCECodeChallenge(codeVerifier);
+
+        const parameters: Record<string, string> = {
+            redirect_uri: config.keycloak.redirectUri,
+            code_challenge: codeChallenge,
+            code_challenge_method: 'S256',
+            scope: 'openid profile email',
+            prompt: 'create'
         };
 
         const randomState = client.randomState();
@@ -202,8 +224,13 @@ export function useAuth() {
 
                 localStorage.removeItem('code_verifier');
                 localStorage.removeItem('state');
-
                 window.history.replaceState({}, document.title, window.location.pathname);
+
+                try {
+                    await authorizedRequest(`${config.backendUrl}/auth/keycloak`, { method: 'POST' });
+                } catch (syncErr) {
+                    console.warn('Failed to sync user with backend:', syncErr);
+                }
             }
         } catch (e) {
             console.error("Login callback error:", e);
@@ -237,6 +264,12 @@ export function useAuth() {
         return clientAccess?.roles ?? [];
     };
 
+    const hasRole = (role: string): boolean => {
+        return getUserRoles().includes(role);
+    };
+
+    const isInstructor = (): boolean => hasRole('instructor');
+
     const logout = (redirectToKeycloak = true) => {
         const idTokenToHint = state.idToken ?? localStorage.getItem('id_token');
 
@@ -246,11 +279,9 @@ export function useAuth() {
 
         if (redirectToKeycloak && config.keycloak.baseUrl) {
             const postLogoutRedirect = location.origin + '/';
-
             const baseUrl = `${config.keycloak.baseUrl.replace(/\/$/, '')}/realms/${config.keycloak.realm}/protocol/openid-connect/logout`;
 
             const url = new URL(baseUrl);
-
             url.searchParams.set('post_logout_redirect_uri', postLogoutRedirect);
 
             if (idTokenToHint) {
@@ -268,11 +299,14 @@ export function useAuth() {
         error,
         init,
         login,
+        register,
         handleCallback,
         authorizedRequest,
         refreshAccessToken,
         getUsername,
         getUserRoles,
+        hasRole,
+        isInstructor,
         logout,
     };
 }

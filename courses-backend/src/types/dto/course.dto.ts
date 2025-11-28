@@ -54,7 +54,6 @@ export class CourseDto {
   @IsNotEmpty()
   public category: string;
 
-  @IsNotEmpty()
   public instructorId: ObjectId;
 
   @IsArray()

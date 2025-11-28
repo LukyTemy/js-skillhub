@@ -4,6 +4,9 @@ import { Request, Response } from "express";
 import { courseService } from "../../../services/course.service";
 import { validateBody, validateParams } from "../../../middleware/validation.middleware";
 import { IdParam } from "../../../types/base.dto";
+import { AuthenticatedRequest } from "../../../middleware/auth.middleware";
+import { ObjectId } from "mongodb";
+import { userService } from "../../../services/user.service";
 
 export class CourseController {
     async getAll(req: Request, res: Response) {
@@ -23,8 +26,20 @@ export class CourseController {
         res.status(200).send(course);
     }
 
-    async create(req: Request, res: Response) {
+    async create(req: AuthenticatedRequest, res: Response) {
         const dto = await validateBody(req, CourseDto);
+
+        if (!req.user || !req.user.sub) {
+            return res.status(401).json({ message: "Authenticated user is required to create a course" });
+        }
+
+        const shadowUser = await userService.getByKeycloakUuid(req.user.sub);
+        if (!shadowUser || !shadowUser._id) {
+            return res.status(400).json({ message: "Instructor not found for current user" });
+        }
+
+        dto.instructorId = new ObjectId(shadowUser._id);
+
         const course = await courseService.create(dto);
         res.status(201).send(course);
     }

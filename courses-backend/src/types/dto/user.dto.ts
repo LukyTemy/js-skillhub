@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsEmail, IsString, Length, IsEnum } from "class-validator";
+import { IsNotEmpty, IsEmail, IsString, Length, IsEnum, IsOptional } from "class-validator";
 
 export enum UserRole {
     Student = "student",
@@ -18,10 +18,28 @@ export class UserDto {
 
     @IsString()
     @Length(8, 32, { message: "Password must be at least 8 characters" })
-    @IsNotEmpty()
-    public password: string;
+    @IsOptional()
+    public password?: string;
 
     @IsEnum(UserRole, { message: "Role must be one of: student, instructor, or admin" })
     @IsNotEmpty()
     public role: UserRole;
+}
+
+export class UserFromKeycloakDto {
+    @IsString()
+    @IsNotEmpty()
+    public keycloakUuid: string;
+
+    @IsString()
+    @IsOptional()
+    public name?: string;
+
+    @IsEmail()
+    @IsOptional()
+    public email?: string;
+
+    @IsEnum(UserRole, { message: "Role must be one of: student, instructor, or admin" })
+    @IsOptional()
+    public role?: UserRole;
 }

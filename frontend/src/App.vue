@@ -21,7 +21,10 @@ onMounted(async () => {
       <div class="auth" v-if="auth.state.isReady">
         <p v-if="auth.state.authenticated">Welcome, {{ auth.getUsername() }}!</p>
         <button v-if="auth.state.authenticated" @click="auth.logout()">Log out</button>
-        <button v-else @click="auth.login()">Log in</button>
+        <div v-else>
+          <button @click="auth.login()">Log in</button>
+          <button @click="auth.register()">Register</button>
+        </div>
       </div>
 
       <div class="auth" v-else>

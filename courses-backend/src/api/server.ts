@@ -67,6 +67,9 @@ server.put("/users/:id", authenticate, userController.update);
 server.delete("/users/:id", authenticate, userController.delete);
 server.get("/users/:id/certificates", authenticate, certificateController.getByUser)
 
+// Endpoint pro registraci/synchronizaci uživatele z Keycloak tokenu
+server.post("/auth/keycloak", authenticate, userController.registerFromKeycloak);
+
 // Courses
 const courseController = new CourseController();
 server.post("/courses", authenticate, hasAnyRole('instructor'), courseController.create);
