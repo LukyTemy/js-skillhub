@@ -7,7 +7,18 @@ export const courseService = {
     course_collection: mongo.db.collection("courses"),
 
     async create(data: CourseDto) {
-        const course = new Course(data.title, data.description, data.category, new ObjectId(data.instructorId), data.lessons);
+        const lessonsWithIds = data.lessons.map(lesson => ({
+            ...lesson,
+            lessonId: new ObjectId()
+        }));
+        const course = new Course(
+            data.title,
+            data.description,
+            data.category,
+            new ObjectId(data.instructorId),
+            lessonsWithIds
+        );
+
         course.createdAt = new Date();
         course.updatedAt = new Date();
         await this.course_collection.insertOne(course);

@@ -1,6 +1,7 @@
-import {IsNotEmpty, IsString, IsArray, IsUUID, IsDate, IsNumber, IsEnum, IsUrl, ArrayMinSize, ValidateNested, Length} from "class-validator";
+import { IsNotEmpty, IsString, IsArray, IsEnum, IsUrl, ValidateNested, IsOptional, Length } from "class-validator";
 import { Type } from "class-transformer";
-import {ObjectId} from "mongodb";
+import { ObjectId } from "mongodb";
+
 
 export enum ContentType {
   Text = "text",
@@ -8,32 +9,73 @@ export enum ContentType {
   Video = "video",
 }
 
-export class LessonContentDto {
-  @IsEnum(ContentType, { message: "Content type must be one of: text, code, or video" })
-  @IsNotEmpty()
-  public type: ContentType;
+
+export abstract class BaseContentDto {
+  @IsEnum(ContentType)
+  type: ContentType;
+}
+
+
+export class TextContentDto extends BaseContentDto {
+  type = ContentType.Text;
 
   @IsString()
   @IsNotEmpty()
-  public data: string;
+  text: string;
+}
+
+// 3. DTO pro Kód
+export class CodeContentDto extends BaseContentDto {
+  type = ContentType.Code;
+
+  @IsString()
+  @IsNotEmpty()
+  code: string;
+
+  @IsString()
+  @IsNotEmpty()
+  language: string;
+
+  @IsString()
+  @IsOptional()
+  filename?: string;
+}
+
+export class VideoContentDto extends BaseContentDto {
+  type = ContentType.Video;
+
+  @IsUrl()
+  url: string;
+
+  @IsString()
+  @IsOptional()
+  caption?: string; // Popisek videa?
 }
 
 export class LessonDto {
-  @IsNotEmpty()
+  @IsOptional()
   public lessonId: ObjectId;
 
   @IsString()
-  @Length(2, 100, { message: "Lesson title must be between 2 and 100 characters" })
+  @Length(2, 100)
   @IsNotEmpty()
   public title: string;
 
   @IsArray()
-  @ArrayMinSize(1, { message: "Lesson must have at least one content item" })
   @ValidateNested({ each: true })
-  @Type(() => LessonContentDto)
-  public content: LessonContentDto[];
+  @Type(() => BaseContentDto, {
+    keepDiscriminatorProperty: true,
+    discriminator: {
+      property: 'type',
+      subTypes: [
+        { value: TextContentDto, name: ContentType.Text },
+        { value: CodeContentDto, name: ContentType.Code },
+        { value: VideoContentDto, name: ContentType.Video },
+      ],
+    },
+  })
+  public content: (TextContentDto | CodeContentDto | VideoContentDto)[];
 
-  @IsNumber()
   @IsNotEmpty()
   public order: number;
 }
