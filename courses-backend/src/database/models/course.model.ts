@@ -1,3 +1,4 @@
+// BACKEND: src/database/models/course.model.ts
 import { ObjectId } from "mongodb";
 
 export enum ContentType {
@@ -6,15 +7,31 @@ export enum ContentType {
     Video = "video",
 }
 
-export interface LessonContent {
-    type: ContentType;
-    data: string;
+// Definice pro jednotlivé typy obsahu (musí sedět s DTO)
+export interface TextContent {
+    type: ContentType.Text;
+    text: string;
 }
+
+export interface CodeContent {
+    type: ContentType.Code;
+    code: string;
+    language: string;
+    filename?: string;
+}
+
+export interface VideoContent {
+    type: ContentType.Video;
+    url: string;
+    caption?: string;
+}
+
+export type LessonContent = TextContent | CodeContent | VideoContent;
 
 export interface Lesson {
     lessonId: ObjectId;
     title: string;
-    content: LessonContent[];
+    content: LessonContent[]; // Tady používáme nový typ
     order: number;
 }
 

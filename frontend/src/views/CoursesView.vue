@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import config from '@/config'
+// import config from '@/config' // Už není potřeba, pokud použijeme service
 import type { Course } from '@/model/Course'
 import { useAuth } from "@/composables/useAuth";
+import { useCourseService } from '@/composables/useCourseService'; // Import service
 
 const courses = ref<Course[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const auth = useAuth()
 const router = useRouter()
+const { listCourses } = useCourseService(); // Použití service
 
 const isInstructor = computed(() => auth.isInstructor ? auth.isInstructor() : false)
 
@@ -17,8 +19,10 @@ async function fetchCourses() {
   loading.value = true;
   error.value = null;
   try {
-    const response = await auth.authorizedRequest(config.backendUrl + "/courses")
-    courses.value = response
+    // Původní: const response = await auth.authorizedRequest(config.backendUrl + "/courses")
+    // Nové čistší řešení přes service:
+    const data = await listCourses();
+    courses.value = data;
   } catch (e: any) {
     console.error("Failed to fetch courses:", e);
     error.value = e.message || "Failed to load courses";
@@ -73,9 +77,16 @@ onMounted(async () => {
           <h3>{{ c.title }}</h3>
           <p class="description">{{ c.description }}</p>
         </div>
+
         <div class="card-footer">
-          <button class="btn-link">View Details →</button>
+          <router-link
+              :to="{ name: 'course-detail', params: { id: c._id } }"
+              class="btn-link"
+          >
+            View Details →
+          </router-link>
         </div>
+
       </article>
     </div>
 
@@ -87,7 +98,7 @@ onMounted(async () => {
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end; /* Zarovnání k dolnímu okraji textu */
+  align-items: flex-end;
   margin-bottom: 2.5rem;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid var(--color-border);
@@ -116,7 +127,7 @@ h1 {
 /* --- Grid --- */
 .courses-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 3 sloupce */
+  grid-template-columns: repeat(3, 1fr);
   gap: 2rem;
 }
 
@@ -162,6 +173,7 @@ h1 {
 }
 
 .btn-link {
+  display: inline-block;
   color: var(--color-primary);
   font-weight: 600;
   font-size: 0.9rem;
@@ -170,12 +182,10 @@ h1 {
 }
 .btn-link:hover { text-decoration: underline; }
 
-/* --- States --- */
 .state-msg { text-align: center; padding: 3rem 0; color: var(--color-text-muted); }
 .state-msg.error { color: #ef4444; }
 .state-msg a { color: var(--color-primary); text-decoration: none; font-weight: 600; }
 
-/* --- Responsivita --- */
 @media (max-width: 900px) {
   .courses-grid { grid-template-columns: repeat(2, 1fr); }
 }

@@ -17,6 +17,11 @@ export function useCourseService() {
     return data as Course[];
   };
 
+  const getCourseById = async (id: string): Promise<Course> => {
+    const data = await auth.authorizedRequest(`${config.backendUrl}/courses/${id}`);
+    return data as Course;
+  };
+
   const createCourse = async (payload: NewCoursePayload): Promise<Course> => {
     const data = await auth.authorizedRequest(`${config.backendUrl}/courses`, {
       method: 'POST',
@@ -28,6 +33,7 @@ export function useCourseService() {
   return {
     listCourses,
     createCourse,
+    getCourseById
   };
 }
 
