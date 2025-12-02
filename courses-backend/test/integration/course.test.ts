@@ -79,7 +79,6 @@ describe('Course Endpoints', () => {
 
     describe('POST /courses', () => {
         it('should create a new course linked to logged instructor', async () => {
-            // Neposíláme instructorId, backend si ho vezme z tokenu (mockovaného)
             const newCourse = {
                 title: "New Test Course",
                 description: "This is a brand new course for testing.",
@@ -104,7 +103,6 @@ describe('Course Endpoints', () => {
                 title: "Updated Course Title",
                 description: "A course for testing purposes.",
                 category: "Testing",
-                // instructorId nemusíme posílat při update, pokud ho neměníme
                 lessons: []
             };
 
@@ -125,12 +123,12 @@ describe('Course Endpoints', () => {
     });
 
     describe('Lesson Endpoints', () => {
-        const newLesson: LessonDto = {
-            lessonId: new ObjectId(), // Backend by měl ideálně generovat ID sám, ale pro test OK
+        const newLesson: any = {
+            lessonId: new ObjectId(),
             title: "First Lesson",
             content: [{
                 type: ContentType.Text,
-                data: "Hello World"
+                text: "Hello World"
             }],
             order: 1
         };

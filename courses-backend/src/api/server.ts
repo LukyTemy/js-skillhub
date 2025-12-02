@@ -9,6 +9,8 @@ import express = require("express");
 import cors from 'cors';
 import {sendMail} from "../grpc/mail.client";
 import { authenticate, hasAnyRole } from "../middleware/auth.middleware";
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from '../config/swagger';
 
 export const server = express();
 
@@ -21,6 +23,8 @@ server.use(express.urlencoded({ extended: true }));
 server.use(cors({
     origin: process.env.CORS_ORIGIN
 }))
+
+server.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Temporary debug endpoint for sending email via nodemailer using
 server.post("/debug/send-mail", async (req, res, next) => {
