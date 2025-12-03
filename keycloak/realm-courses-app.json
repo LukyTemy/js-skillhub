@@ -45,6 +45,7 @@
 
   "users": [
     {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
       "username": "student1",
       "enabled": true,
       "emailVerified": true,
@@ -52,17 +53,12 @@
       "lastName": "One",
       "email": "student1@example.com",
       "credentials": [
-        {
-          "type": "password",
-          "value": "student",
-          "temporary": false
-        }
+        { "type": "password", "value": "student", "temporary": false }
       ],
-      "clientRoles": {
-        "web-app": ["student"]
-      }
+      "clientRoles": { "web-app": ["student"] }
     },
     {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
       "username": "instructor1",
       "enabled": true,
       "emailVerified": true,
@@ -70,15 +66,22 @@
       "lastName": "One",
       "email": "instructor1@example.com",
       "credentials": [
-        {
-          "type": "password",
-          "value": "instructor",
-          "temporary": false
-        }
+        { "type": "password", "value": "instructor", "temporary": false }
       ],
-      "clientRoles": {
-        "web-app": ["instructor"]
-      }
+      "clientRoles": { "web-app": ["instructor"] }
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440003",
+      "username": "admin1",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "User",
+      "email": "admin@example.com",
+      "credentials": [
+        { "type": "password", "value": "admin", "temporary": false }
+      ],
+      "clientRoles": { "web-app": ["admin"] }
     }
   ]
 }

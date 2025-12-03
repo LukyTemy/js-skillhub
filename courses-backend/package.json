@@ -5,7 +5,8 @@
   "scripts": {
     "start": "vite-node src/app.ts",
     "test": "vitest --no-file-parallelism",
-    "test:watch": "vitest --no-file-parallelism"
+    "test:watch": "vitest --no-file-parallelism",
+    "seed": "vite-node src/database/seeder.ts"
   },
   "author": "",
   "license": "ISC",
