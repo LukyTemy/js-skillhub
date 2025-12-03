@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-// import config from '@/config' // Už není potřeba, pokud použijeme service
 import type { Course } from '@/model/Course'
 import { useAuth } from "@/composables/useAuth";
-import { useCourseService } from '@/composables/useCourseService'; // Import service
+import { useCourseService } from '@/composables/useCourseService';
+import { useEnrollmentService } from '@/composables/useEnrollmentService';
 
 const courses = ref<Course[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const auth = useAuth()
 const router = useRouter()
-const { listCourses } = useCourseService(); // Použití service
+const { listCourses } = useCourseService();
+const { getUserEnrollments, getCurrentBackendUser } = useEnrollmentService();
+
+const userEnrollments = ref<any[]>([]);
 
 const isInstructor = computed(() => auth.isInstructor ? auth.isInstructor() : false)
 
@@ -19,16 +22,26 @@ async function fetchCourses() {
   loading.value = true;
   error.value = null;
   try {
-    // Původní: const response = await auth.authorizedRequest(config.backendUrl + "/courses")
-    // Nové čistší řešení přes service:
-    const data = await listCourses();
-    courses.value = data;
+    courses.value = await listCourses();
+
+    if (auth.state.authenticated) {
+      const user = await getCurrentBackendUser();
+      if (user && user._id) {
+        userEnrollments.value = await getUserEnrollments(user._id);
+      }
+    }
   } catch (e: any) {
     console.error("Failed to fetch courses:", e);
     error.value = e.message || "Failed to load courses";
   } finally {
     loading.value = false;
   }
+}
+
+function getCourseStatus(courseId: string) {
+  const enrollment = userEnrollments.value.find((e: any) => e.courseId === courseId);
+  if (!enrollment) return null;
+  return enrollment.status;
 }
 
 function goToCreateCourse() {
@@ -73,7 +86,11 @@ onMounted(async () => {
     <div v-if="!loading && !error && courses.length > 0" class="courses-grid">
       <article v-for="c in courses" :key="c._id" class="course-card">
         <div class="card-content">
-          <span class="badge">{{ c.category ?? 'General' }}</span>
+          <div class="badges-row">
+            <span class="badge">{{ c.category ?? 'General' }}</span>
+            <span v-if="getCourseStatus(c._id) === 'active'" class="badge enrolled">Zapsáno ✅</span>
+            <span v-else-if="getCourseStatus(c._id) === 'completed'" class="badge completed">Dokončeno 🏆</span>
+          </div>
           <h3>{{ c.title }}</h3>
           <p class="description">{{ c.description }}</p>
         </div>
@@ -94,7 +111,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* --- Header --- */
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -124,14 +140,12 @@ h1 {
   padding: 0.6rem 1.2rem;
 }
 
-/* --- Grid --- */
 .courses-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 2rem;
 }
 
-/* --- Course Card --- */
 .course-card {
   background: white;
   border: 1px solid var(--color-border);
@@ -150,6 +164,13 @@ h1 {
 
 .card-content { padding: 1.5rem; flex: 1; }
 
+.badges-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
 .badge {
   display: inline-block;
   background-color: #eff6ff;
@@ -158,10 +179,12 @@ h1 {
   font-weight: 700;
   padding: 0.25rem 0.75rem;
   border-radius: 99px;
-  margin-bottom: 1rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
+.badge.enrolled { background: #dcfce7; color: #166534; }
+.badge.completed { background: #fef08a; color: #854d0e; }
 
 .course-card h3 { margin: 0 0 0.75rem 0; font-size: 1.25rem; font-weight: 600; line-height: 1.3; }
 .description { color: var(--color-text-muted); font-size: 0.95rem; line-height: 1.6; margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }

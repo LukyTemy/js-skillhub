@@ -2,40 +2,74 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useCourseService } from '@/composables/useCourseService';
-import type { Course, Lesson } from '@/model/Course';
+import { useEnrollmentService } from '@/composables/useEnrollmentService';
+import { useAuth } from '@/composables/useAuth';
+import type { Course } from '@/model/Course';
 
 const route = useRoute();
 const router = useRouter();
 const { getCourseById } = useCourseService();
+const { getUserEnrollments, getCurrentBackendUser, updateEnrollmentStatus } = useEnrollmentService();
+const auth = useAuth();
 
 const course = ref<Course | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
+const authorizing = ref(true);
+const currentEnrollmentId = ref<string | null>(null);
 
-// Načtení kurzu (potřebujeme celý kurz, abychom znali pořadí lekcí pro navigaci)
 async function loadData() {
   loading.value = true;
+  authorizing.value = true;
   error.value = null;
   const courseId = route.params.id as string;
 
   try {
-    // Pokud už máme kurz načtený a jen se změnila lekce, nemusíme stahovat znovu
     if (!course.value || course.value._id !== courseId) {
       course.value = await getCourseById(courseId);
     }
+
+    if (auth.hasRole('admin') || auth.hasRole('instructor')) {
+      authorizing.value = false;
+      return;
+    }
+
+    if (auth.state.authenticated) {
+      const user = await getCurrentBackendUser();
+      if (user && user._id) {
+        const enrollments = await getUserEnrollments(user._id);
+
+        const activeEnrollment = enrollments.find((e: any) =>
+            e.courseId === courseId && (e.status === 'active' || e.status === 'completed')
+        );
+
+        if (!activeEnrollment) {
+          alert("Pro zobrazení lekce musíte být zapsáni v kurzu.");
+          router.replace({ name: 'course-detail', params: { id: courseId } });
+          return;
+        } else {
+          currentEnrollmentId.value = activeEnrollment._id;
+        }
+      } else {
+        throw new Error("User data not found");
+      }
+    } else {
+      router.replace({ name: 'home' });
+      return;
+    }
+
   } catch (e: any) {
-    console.error("Failed to load course context", e);
-    error.value = "Nepodařilo se načíst obsah lekce.";
+    console.error("Failed to load course context or verify enrollment", e);
+    error.value = "Nepodařilo se ověřit přístup k lekci.";
   } finally {
     loading.value = false;
+    authorizing.value = false;
   }
 }
 
 onMounted(() => {
   loadData();
 });
-
-// --- Logika pro aktuální lekci a navigaci ---
 
 const currentLessonId = computed(() => route.params.lessonId as string);
 
@@ -59,15 +93,12 @@ const nextLesson = computed(() => {
   return course.value.lessons[currentLessonIndex.value + 1];
 });
 
-// --- Navigační funkce ---
-
 function navigateToLesson(lessonId: string) {
   if (!course.value) return;
   router.push({
     name: 'lesson-detail',
     params: { id: course.value._id, lessonId: lessonId }
   });
-  // Scroll nahoru při změně lekce
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -76,16 +107,28 @@ function goBackToCourse() {
   router.push({ name: 'course-detail', params: { id: course.value._id } });
 }
 
-// --- Pomocné funkce pro obsah ---
+async function handleFinishCourse() {
+  if (!currentEnrollmentId.value) return;
 
-// Jednoduchý převod YouTube URL na embed URL
+  if (!confirm("Gratulujeme k dokončení všech lekcí! Chcete kurz označit jako dokončený?")) {
+    return;
+  }
+
+  try {
+    await updateEnrollmentStatus(currentEnrollmentId.value, 'completed');
+    alert("Kurz byl úspěšně dokončen! 🎓");
+    router.push({ name: 'course-detail', params: { id: course.value?._id } });
+  } catch (e) {
+    console.error("Failed to complete course", e);
+    alert("Nepodařilo se dokončit kurz.");
+  }
+}
+
 function getEmbedUrl(url: string): string {
   if (!url) return '';
-  // Pokud je to youtube watch url
   if (url.includes('youtube.com/watch?v=')) {
     return url.replace('watch?v=', 'embed/');
   }
-  // Pokud je to youtu.be short url
   if (url.includes('youtu.be/')) {
     return url.replace('youtu.be/', 'youtube.com/embed/');
   }
@@ -96,7 +139,10 @@ function getEmbedUrl(url: string): string {
 <template>
   <div class="lesson-view-container">
 
-    <div v-if="loading && !course" class="state-msg">Načítám lekci...</div>
+    <div v-if="loading || authorizing" class="state-msg">
+      Ověřuji přístup a načítám lekci...
+    </div>
+
     <div v-else-if="error" class="state-msg error">{{ error }}</div>
 
     <div v-else-if="course && currentLesson" class="lesson-layout">
@@ -170,15 +216,16 @@ function getEmbedUrl(url: string): string {
 
         <button
             class="nav-btn next"
-            :disabled="!nextLesson"
-            @click="nextLesson && navigateToLesson(nextLesson.lessonId)"
+            :class="{ 'finish-btn': !nextLesson }"
+            @click="nextLesson ? navigateToLesson(nextLesson.lessonId) : handleFinishCourse()"
         >
           <div class="btn-text">
-            <span class="label">Další lekce</span>
+            <span class="label">{{ nextLesson ? 'Další lekce' : 'Konec kurzu' }}</span>
             <span class="title" v-if="nextLesson">{{ nextLesson.title }}</span>
             <span class="title" v-else>Dokončit kurz</span>
           </div>
-          <span class="arrow">→</span>
+          <span class="arrow" v-if="nextLesson">→</span>
+          <span class="arrow" v-else>🏁</span>
         </button>
       </footer>
 
@@ -189,7 +236,7 @@ function getEmbedUrl(url: string): string {
 <style scoped>
 .lesson-view-container {
   min-height: 100vh;
-  background-color: #f8fafc; /* Jemně šedé pozadí celé stránky */
+  background-color: #f8fafc;
 }
 
 .lesson-layout {
@@ -202,7 +249,6 @@ function getEmbedUrl(url: string): string {
   flex-direction: column;
 }
 
-/* --- Header --- */
 .lesson-header {
   padding: 1rem 2rem;
   border-bottom: 1px solid #e2e8f0;
@@ -220,6 +266,8 @@ function getEmbedUrl(url: string): string {
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
+  background: none;
+  border: none;
 }
 .btn-back:hover { color: #0f172a; text-decoration: underline; }
 
@@ -234,10 +282,9 @@ function getEmbedUrl(url: string): string {
 .course-title { font-weight: 500; color: #475569; }
 .lesson-counter { color: #94a3b8; }
 
-/* --- Content Area --- */
 .content-area {
   padding: 3rem 2rem;
-  flex: 1; /* Aby footer byl vždy dole */
+  flex: 1;
 }
 
 .lesson-main-title {
@@ -254,18 +301,16 @@ function getEmbedUrl(url: string): string {
   gap: 2rem;
 }
 
-/* 1. Text Block Styling */
 .text-block p {
   font-size: 1.1rem;
   line-height: 1.8;
   color: #334155;
   margin: 0;
-  white-space: pre-wrap; /* Zachová odstavce */
+  white-space: pre-wrap;
 }
 
-/* 2. Code Block Styling (VS Code style) */
 .code-block-wrapper {
-  background-color: #1e1e1e; /* Dark theme bg */
+  background-color: #1e1e1e;
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #333;
@@ -298,14 +343,13 @@ function getEmbedUrl(url: string): string {
 .code-content {
   margin: 0;
   padding: 1.25rem;
-  overflow-x: auto; /* Horizontální scroll pro dlouhé řádky */
+  overflow-x: auto;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 0.95rem;
   line-height: 1.6;
-  color: #d4d4d4; /* Default text color light grey */
+  color: #d4d4d4;
 }
 
-/* 3. Video Block Styling */
 .video-block {
   width: 100%;
 }
@@ -313,7 +357,7 @@ function getEmbedUrl(url: string): string {
 .video-container {
   position: relative;
   width: 100%;
-  padding-bottom: 56.25%; /* Aspect Ratio 16:9 */
+  padding-bottom: 56.25%;
   background: #000;
   border-radius: 12px;
   overflow: hidden;
@@ -341,7 +385,6 @@ function getEmbedUrl(url: string): string {
 .url-text { margin-top: 1rem; font-size: 0.85rem; opacity: 0.7; }
 .video-caption { text-align: center; color: #64748b; margin-top: 0.5rem; font-size: 0.9rem; font-style: italic; }
 
-/* --- Footer Navigation --- */
 .lesson-footer {
   padding: 2rem;
   border-top: 1px solid #e2e8f0;
@@ -377,9 +420,9 @@ function getEmbedUrl(url: string): string {
 }
 
 .nav-btn.next {
-  margin-left: auto; /* Pokud chybí prev tlačítko, next se zarovná doprava */
+  margin-left: auto;
   text-align: right;
-  background: #0f172a; /* Tmavé tlačítko pro "Další" */
+  background: #0f172a;
   color: white;
   border: none;
 }
@@ -392,7 +435,18 @@ function getEmbedUrl(url: string): string {
 .btn-text .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.8; margin-bottom: 0.2rem; }
 .btn-text .title { font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
 
-/* Mobile responsivity */
+.btn-primary { background-color: #0f172a; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; text-decoration: none;}
+
+/* Finish button style */
+.nav-btn.finish-btn {
+  background: #166534;
+  color: white;
+  border-color: #166534;
+}
+.nav-btn.finish-btn:hover {
+  background: #15803d;
+}
+
 @media (max-width: 600px) {
   .lesson-header { padding: 1rem; }
   .content-area { padding: 2rem 1rem; }

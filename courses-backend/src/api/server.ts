@@ -90,9 +90,10 @@ server.delete("/courses/:id/lessons/:lessonId", authenticate, courseController.d
 
 // Enrollments
 const enrollmentController = new EnrollmentController();
-server.post("/enrollments", authenticate, enrollmentController.create);
+server.post("/enrollments", authenticate, hasAnyRole('student'), enrollmentController.create);
 server.get("/enrollments/:userId", authenticate, enrollmentController.getByUser);
 server.delete("/enrollments/:id", authenticate, enrollmentController.delete);
+server.patch("/enrollments/:id/status", authenticate, enrollmentController.updateStatus);
 
 // Notifications
 const notificationController = new NotificationController();

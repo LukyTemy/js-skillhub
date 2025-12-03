@@ -77,6 +77,50 @@ export class EnrollmentController {
 
     /**
      * @swagger
+     * /enrollments/{id}/status:
+     *   patch:
+     *     summary: Změní stav zápisu (např. na 'completed' nebo 'cancelled')
+     *     tags: [Enrollments]
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *         description: ID zápisu (MongoDB ObjectId)
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+     *               - status
+     *             properties:
+     *               status:
+     *                 $ref: '#/components/schemas/EnrollmentStatus'
+     *     responses:
+     *       200:
+     *         description: Stav byl úspěšně změněn
+     *       404:
+     *         description: Zápis nenalezen
+     */
+    async updateStatus(req: Request, res: Response) {
+        const { id } = await validateParams(req, IdParam);
+        const { status } = req.body;
+        const updated = await enrollmentService.update(id, { status } as any);
+
+        if (!updated) {
+            res.status(404).send();
+            return;
+        }
+        res.status(200).send(updated);
+    }
+
+    /**
+     * @swagger
      * /enrollments/{id}:
      *   delete:
      *     summary: Smaže zápis do kurzu

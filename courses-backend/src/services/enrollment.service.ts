@@ -1,5 +1,5 @@
 import Enrollment from "../database/models/enrollment.model";
-import {EnrollmentDto} from "../types/dto/enrollment.dto";
+import {EnrollmentDto, EnrollmentStatus} from "../types/dto/enrollment.dto";
 import mongo from "../database/mongo";
 import {ObjectId} from "mongodb";
 
@@ -7,6 +7,19 @@ export const enrollmentService = {
     enrollment_collection: mongo.db.collection("enrollments"),
 
     async create(data: EnrollmentDto) {
+        const existingEnrollment = await this.enrollment_collection.findOne({
+            userId: new ObjectId(data.userId),
+            courseId: new ObjectId(data.courseId)
+        });
+
+        if (existingEnrollment) {
+            return this.enrollment_collection.findOneAndUpdate(
+                { _id: existingEnrollment._id },
+                { $set: { status: EnrollmentStatus.Active } },
+                { returnDocument: "after" }
+            );
+        }
+
         const enrollment = new Enrollment(new ObjectId(data.userId), new ObjectId(data.courseId), data.status);
         await this.enrollment_collection.insertOne(enrollment);
         return enrollment;
@@ -16,7 +29,7 @@ export const enrollmentService = {
         return this.enrollment_collection.findOne({ _id: new ObjectId(id) });
     },
 
-    async update(id: string, data: EnrollmentDto) {
+    async update(id: string, data: Partial<EnrollmentDto>) {
         return this.enrollment_collection.findOneAndUpdate(
             { _id: new ObjectId(id) },
             { $set: data },
@@ -30,7 +43,6 @@ export const enrollmentService = {
 
     async getByUser(userId: string) {
         const userObjectId = new ObjectId(userId);
-
         return await this.enrollment_collection
             .find({userId: userObjectId})
             .toArray();
@@ -45,13 +57,5 @@ export const enrollmentService = {
             userId: new ObjectId(userId),
             courseId: new ObjectId(courseId)
         });
-    },
-
-    async cancelEnrollment(id: string) {
-        return this.enrollment_collection.findOneAndUpdate(
-            { _id: new ObjectId(id) },
-            { $set: { status: "cancelled" } },
-            { returnDocument: "after" }
-        );
     },
 };
