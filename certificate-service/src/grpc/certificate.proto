@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package certificate;
+
+service CertificateService {
+  rpc GenerateCertificate (CertificateRequest) returns (CertificateResponse) {}
+}
+
+message CertificateRequest {
+  string studentName = 1;
+  string courseName = 2;
+  string completionDate = 3; // Pošleme jako ISO string
+  string userId = 4; // Pro název souboru
+}
+
+message CertificateResponse {
+  string pdfUrl = 1;
+  bool success = 2;
+  string error = 3;
+}

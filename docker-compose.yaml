@@ -32,11 +32,19 @@ services:
       - MONGO_URL=mongodb://mongo:27017/courses-backend
       - CORS_ORIGIN=http://localhost:5002
       - MAIL_SERVICE_ADDRESS=mail-service:50051
+      # PŘIDÁNO: Adresa nové služby pro certifikáty
+      - CERTIFICATE_SERVICE_ADDRESS=certificate-service:50052
       - KEYCLOAK_BASE_URL=${KEYCLOAK_BASE_URL}
       - KEYCLOAK_REALM=${KEYCLOAK_REALM}
       - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
+    depends_on:
+      - mongo
+      - keycloak
+      - mail-service
+      - certificate-service
     networks:
       - app-net
+
   mail-service:
     build:
       context: ./mail-service
@@ -52,6 +60,18 @@ services:
       - "50051:50051"
     networks:
       - app-net
+
+  # PŘIDÁNO: Nová služba pro certifikáty
+  certificate-service:
+    build:
+      context: ./certificate-service
+    environment:
+      - PORT=50052
+    ports:
+      - "50052:50052"
+    networks:
+      - app-net
+
   frontend:
     build:
       context: ./frontend

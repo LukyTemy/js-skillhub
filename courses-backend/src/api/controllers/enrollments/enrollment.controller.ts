@@ -1,10 +1,14 @@
 import "reflect-metadata";
-import { EnrollmentDto } from "../../../types/dto/enrollment.dto";
+import {EnrollmentDto, EnrollmentStatus} from "../../../types/dto/enrollment.dto";
 import { Request, Response } from "express";
 import { enrollmentService } from "../../../services/enrollment.service";
 import { validateBody, validateParams } from "../../../middleware/validation.middleware";
 import { IdParam } from "../../../types/base.dto";
 import {ApiError} from "../../../types/api.error";
+import {userService} from "../../../services/user.service";
+import {courseService} from "../../../services/course.service";
+import {CertificateDto} from "../../../types/dto/certificate.dto";
+import {certificateService} from "../../../services/certificate.service";
 
 export class EnrollmentController {
     /**
@@ -110,12 +114,37 @@ export class EnrollmentController {
     async updateStatus(req: Request, res: Response) {
         const { id } = await validateParams(req, IdParam);
         const { status } = req.body;
-        const updated = await enrollmentService.update(id, { status } as any);
 
-        if (!updated) {
-            res.status(404).send();
+        const currentEnrollment = await enrollmentService.getById(id);
+        if (!currentEnrollment) {
+            res.status(404).send({ message: "Enrollment not found" });
             return;
         }
+
+        const updated = await enrollmentService.update(id, { status } as any);
+
+        if (status === EnrollmentStatus.Completed) {
+            try {
+                const user = await userService.getById(currentEnrollment.userId.toString());
+                const course = await courseService.getById(currentEnrollment.courseId.toString());
+
+                if (user && course) {
+                    const certDto = new CertificateDto();
+                    certDto.userId = currentEnrollment.userId;
+                    certDto.courseId = currentEnrollment.courseId;
+                    certDto.issuedAt = new Date();
+                    certDto.fileUrl = "";
+
+                    await certificateService.create(certDto);
+
+                    console.log(`🎓 Certificate generated for user ${user.name} in course ${course.title}`);
+                }
+            } catch (err) {
+                // Chyba při generování certifikátu by neměla shodit dokončení kurzu
+                console.error("❌ Failed to generate certificate during completion:", err);
+            }
+        }
+
         res.status(200).send(updated);
     }
 
