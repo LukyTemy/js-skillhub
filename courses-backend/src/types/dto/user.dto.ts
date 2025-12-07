@@ -33,11 +33,6 @@ export enum UserRole {
  *           type: string
  *           format: email
  *           example: jan.novak@example.com
- *         password:
- *           type: string
- *           minLength: 8
- *           description: Heslo je volitelné při updatech
- *           example: tajneHeslo123
  *         role:
  *           $ref: '#/components/schemas/UserRole'
  *
@@ -66,11 +61,6 @@ export class UserDto {
     @IsEmail()
     @IsNotEmpty()
     public email: string;
-
-    @IsString()
-    @Length(8, 32, { message: "Password must be at least 8 characters" })
-    @IsOptional()
-    public password?: string;
 
     @IsEnum(UserRole, { message: "Role must be one of: student, instructor, or admin" })
     @IsNotEmpty()

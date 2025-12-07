@@ -7,7 +7,6 @@ export enum ContentType {
     Video = "video",
 }
 
-// Definice pro jednotlivé typy obsahu (musí sedět s DTO)
 export interface TextContent {
     type: ContentType.Text;
     text: string;
@@ -31,7 +30,7 @@ export type LessonContent = TextContent | CodeContent | VideoContent;
 export interface Lesson {
     lessonId: ObjectId;
     title: string;
-    content: LessonContent[]; // Tady používáme nový typ
+    content: LessonContent[];
     order: number;
 }
 

@@ -6,12 +6,6 @@ import {ObjectId} from "mongodb";
 export const userService = {
     user_collection: mongo.db.collection("users"),
 
-    async create(data: UserDto) {
-        const user = new User(data.name, data.email, data.role, null);
-        await this.user_collection.insertOne(user);
-        return user;
-    },
-
     async getAll() {
         return this.user_collection.find().toArray();
     },

@@ -36,7 +36,7 @@ onUnmounted(() => {
     <div class="container navbar-content">
 
       <div class="nav-left">
-        <RouterLink to="/" class="brand-logo">MyApp</RouterLink>
+        <RouterLink to="/" class="brand-logo">SkillHub</RouterLink>
         <div class="nav-links">
           <RouterLink to="/courses" class="nav-link">Courses</RouterLink>
         </div>

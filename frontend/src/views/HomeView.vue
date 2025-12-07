@@ -15,7 +15,7 @@ const auth = useAuth();
         </h1>
 
         <p class="subtitle">
-          Welcome to <strong>MyApp</strong>. The best place to learn programming, design, and more from industry experts. Start your journey today.
+          Welcome to <strong>SkillHub</strong>. The best place to learn programming, design, and more from industry experts. Start your journey today.
         </p>
 
         <div class="actions">

@@ -66,7 +66,6 @@ const userController = new UserController();
 const certificateController = new CertificateController();
 server.get("/users", authenticate, userController.getAll);
 server.get("/users/:id", authenticate, userController.getById);
-server.post("/users", authenticate, userController.create);
 server.put("/users/:id", authenticate, userController.update);
 server.delete("/users/:id", authenticate, userController.delete);
 server.get("/users/:id/certificates", authenticate, certificateController.getByUser)
