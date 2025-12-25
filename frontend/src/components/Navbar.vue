@@ -55,6 +55,7 @@ onUnmounted(() => {
 
           <transition name="fade">
             <div v-if="isDropdownOpen" class="dropdown-menu">
+              <RouterLink to="/my-certificates" class="dropdown-item" @click="isDropdownOpen = false">My Certificates</RouterLink>
               <button @click="handleLogout" class="dropdown-item danger">Log Out</button>
             </div>
           </transition>
@@ -71,7 +72,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* --- Navbar Styles --- */
 .navbar {
   position: fixed; top: 0; left: 0; right: 0; height: 64px;
   background-color: rgba(255, 255, 255, 0.95);
@@ -89,7 +89,6 @@ onUnmounted(() => {
 .nav-link { text-decoration: none; color: var(--color-text-main); font-weight: 500; transition: color 0.2s; }
 .nav-link:hover, .router-link-active { color: var(--color-primary); }
 
-/* --- Buttons (Scoped versions if needed specific adjustments) --- */
 .btn-text { color: var(--color-text-muted); padding: 0.5rem 1rem; font-weight: 600; cursor: pointer; }
 .btn-text:hover { color: var(--color-primary); }
 
@@ -99,22 +98,20 @@ onUnmounted(() => {
 }
 .btn-primary:hover { background-color: var(--color-primary-hover); transform: translateY(-1px); }
 
-/* --- User Menu --- */
 .user-menu-container { position: relative; }
 .user-btn { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; padding: 0.5rem; border-radius: var(--radius); cursor: pointer; color: var(--color-text-main); }
 .user-btn:hover { background-color: var(--color-bg-secondary); }
 
 .dropdown-menu {
-  position: absolute; top: 120%; right: 0; width: 150px;
+  position: absolute; top: 120%; right: 0; width: 180px;
   background: white; border: 1px solid var(--color-border); border-radius: var(--radius);
   box-shadow: var(--shadow-md); padding: 0.5rem; display: flex; flex-direction: column;
 }
-.dropdown-item { padding: 0.6rem; text-align: left; border-radius: 4px; color: var(--color-text-main); font-weight: 500; cursor: pointer; }
+.dropdown-item { padding: 0.6rem; text-align: left; border-radius: 4px; color: var(--color-text-main); font-weight: 500; cursor: pointer; text-decoration: none; font-size: 0.95rem; }
 .dropdown-item:hover { background-color: var(--color-bg-secondary); }
-.dropdown-item.danger { color: #ef4444; }
+.dropdown-item.danger { color: #ef4444; border-top: 1px solid #f1f5f9; margin-top: 0.25rem; padding-top: 0.75rem; }
 .dropdown-item.danger:hover { background-color: #fef2f2; }
 
-/* --- Utils --- */
 .spinner-small { width: 20px; height: 20px; border: 2px solid var(--color-border); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }

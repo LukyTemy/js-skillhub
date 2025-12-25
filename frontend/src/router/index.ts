@@ -4,6 +4,7 @@ import CoursesView from '../views/CoursesView.vue'
 import LoginCallbackView from '../views/LoginCallbackView.vue'
 import CourseCreateView from '../views/CourseCreateView.vue'
 import CourseDetailView from "@/views/CourseDetailView.vue";
+import CertificatesView from "@/views/CertificatesView.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -29,16 +30,18 @@ const router = createRouter({
       component: CourseDetailView
     },
     {
-      path: '/courses/:id/lessons/:lessonId', // Dynamická URL pro lekci
-      name: 'lesson-detail',                // Na toto jméno se odkazuješ
-      component: () => import('../views/LessonView.vue') // Zatím placeholder
+      path: '/courses/:id/lessons/:lessonId',
+      name: 'lesson-detail',
+      component: () => import('../views/LessonView.vue')
+    },
+    {
+      path: '/my-certificates',
+      name: 'my-certificates',
+      component: CertificatesView
     },
     {
       path: '/about',
       name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
       component: () => import('../views/AboutView.vue'),
     },
     {
