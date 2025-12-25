@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useCourseService } from '@/composables/useCourseService';
 import { useEnrollmentService } from '@/composables/useEnrollmentService';
 import { useAuth } from '@/composables/useAuth';
 import type { Course } from '@/model/Course';
+import BaseModal from '@/components/BaseModal.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -17,6 +18,13 @@ const loading = ref(true);
 const error = ref<string | null>(null);
 const authorizing = ref(true);
 const currentEnrollmentId = ref<string | null>(null);
+const isCourseCompleted = ref(false);
+
+const showFinishModal = ref(false);
+const showSuccessModal = ref(false);
+const processingFinish = ref(false);
+
+const isInstructorOrAdmin = computed(() => auth.hasRole('instructor') || auth.hasRole('admin'));
 
 async function loadData() {
   loading.value = true;
@@ -29,7 +37,7 @@ async function loadData() {
       course.value = await getCourseById(courseId);
     }
 
-    if (auth.hasRole('admin') || auth.hasRole('instructor')) {
+    if (isInstructorOrAdmin.value) {
       authorizing.value = false;
       return;
     }
@@ -44,11 +52,11 @@ async function loadData() {
         );
 
         if (!activeEnrollment) {
-          alert("Pro zobrazení lekce musíte být zapsáni v kurzu.");
           router.replace({ name: 'course-detail', params: { id: courseId } });
           return;
         } else {
           currentEnrollmentId.value = activeEnrollment._id;
+          isCourseCompleted.value = activeEnrollment.status === 'completed';
         }
       } else {
         throw new Error("User data not found");
@@ -107,20 +115,31 @@ function goBackToCourse() {
   router.push({ name: 'course-detail', params: { id: course.value._id } });
 }
 
-async function handleFinishCourse() {
+function handleFinishClick() {
+  showFinishModal.value = true;
+}
+
+async function confirmFinishCourse() {
   if (!currentEnrollmentId.value) return;
 
-  if (!confirm("Gratulujeme k dokončení všech lekcí! Chcete kurz označit jako dokončený?")) {
-    return;
-  }
+  processingFinish.value = true;
 
   try {
     await updateEnrollmentStatus(currentEnrollmentId.value, 'completed');
-    alert("Kurz byl úspěšně dokončen! 🎓");
-    router.push({ name: 'course-detail', params: { id: course.value?._id } });
+    isCourseCompleted.value = true;
+    showFinishModal.value = false;
+    showSuccessModal.value = true;
   } catch (e) {
     console.error("Failed to complete course", e);
-    alert("Nepodařilo se dokončit kurz.");
+  } finally {
+    processingFinish.value = false;
+  }
+}
+
+function handleSuccessClose() {
+  showSuccessModal.value = false;
+  if (course.value) {
+    router.push({ name: 'course-detail', params: { id: course.value._id } });
   }
 }
 
@@ -215,21 +234,78 @@ function getEmbedUrl(url: string): string {
         </button>
 
         <button
+            v-if="nextLesson"
             class="nav-btn next"
-            :class="{ 'finish-btn': !nextLesson }"
-            @click="nextLesson ? navigateToLesson(nextLesson.lessonId) : handleFinishCourse()"
+            @click="navigateToLesson(nextLesson.lessonId)"
         >
           <div class="btn-text">
-            <span class="label">{{ nextLesson ? 'Další lekce' : 'Konec kurzu' }}</span>
-            <span class="title" v-if="nextLesson">{{ nextLesson.title }}</span>
-            <span class="title" v-else>Dokončit kurz</span>
+            <span class="label">Další lekce</span>
+            <span class="title">{{ nextLesson.title }}</span>
           </div>
-          <span class="arrow" v-if="nextLesson">→</span>
-          <span class="arrow" v-else>🏁</span>
+          <span class="arrow">→</span>
+        </button>
+
+        <div
+            v-else-if="isCourseCompleted"
+            class="nav-btn next completed-badge"
+        >
+          <div class="btn-text">
+            <span class="label">Status</span>
+            <span class="title">Kurz již dokončen ✅</span>
+          </div>
+        </div>
+
+        <button
+            v-else-if="!isInstructorOrAdmin"
+            class="nav-btn next finish-btn"
+            @click="handleFinishClick"
+        >
+          <div class="btn-text">
+            <span class="label">Konec kurzu</span>
+            <span class="title">Dokončit kurz</span>
+          </div>
+          <span class="arrow">🏁</span>
         </button>
       </footer>
-
     </div>
+
+    <BaseModal
+        :is-open="showFinishModal"
+        title="Dokončení kurzu"
+        @close="!processingFinish && (showFinishModal = false)"
+    >
+      <div v-if="processingFinish" class="processing-content">
+        <div class="spinner"></div>
+        <p>Generuji certifikát, prosím čekejte...</p>
+      </div>
+      <div v-else>
+        <p>Gratulujeme k dokončení všech lekcí!</p>
+        <p>Chcete kurz označit jako dokončený a získat certifikát?</p>
+      </div>
+
+      <template #footer>
+        <div v-if="processingFinish"></div>
+        <div v-else>
+          <button class="btn btn-secondary" @click="showFinishModal = false">Zrušit</button>
+          <button class="btn btn-primary" @click="confirmFinishCourse">Potvrdit</button>
+        </div>
+      </template>
+    </BaseModal>
+
+    <BaseModal
+        :is-open="showSuccessModal"
+        title="Kurz dokončen!"
+        @close="handleSuccessClose"
+    >
+      <div style="text-align: center;">
+        <p style="font-size: 3rem; margin: 1rem 0;">🎓</p>
+        <p>Kurz byl úspěšně dokončen a certifikát byl vygenerován.</p>
+      </div>
+      <template #footer>
+        <button class="btn btn-primary" @click="handleSuccessClose">Zpět na detail kurzu</button>
+      </template>
+    </BaseModal>
+
   </div>
 </template>
 
@@ -392,6 +468,7 @@ function getEmbedUrl(url: string): string {
   justify-content: space-between;
   background: #f8fafc;
   margin-top: 3rem;
+  min-height: 100px;
 }
 
 .nav-btn {
@@ -436,8 +513,9 @@ function getEmbedUrl(url: string): string {
 .btn-text .title { font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
 
 .btn-primary { background-color: #0f172a; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; text-decoration: none;}
+.btn-secondary { background: white; border-color: #d1d5db; color: #374151; padding: 0.5rem 1rem; border-radius: 0.5rem; border-style: solid; border-width: 1px; }
+.btn-secondary:hover { background: #f3f4f6; }
 
-/* Finish button style */
 .nav-btn.finish-btn {
   background: #166534;
   color: white;
@@ -445,6 +523,40 @@ function getEmbedUrl(url: string): string {
 }
 .nav-btn.finish-btn:hover {
   background: #15803d;
+}
+
+.nav-btn.completed-badge {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #e2e8f0;
+  cursor: default;
+  margin-left: auto;
+  text-align: right;
+}
+.nav-btn.completed-badge:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.processing-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e2e8f0;
+  border-top-color: #0f172a;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 @media (max-width: 600px) {

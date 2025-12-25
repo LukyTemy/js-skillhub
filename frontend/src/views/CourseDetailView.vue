@@ -5,6 +5,7 @@ import { useCourseService } from '@/composables/useCourseService';
 import { useEnrollmentService } from '@/composables/useEnrollmentService';
 import { useAuth } from '@/composables/useAuth';
 import type { Course, Lesson } from '@/model/Course';
+import BaseModal from '@/components/BaseModal.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -21,7 +22,11 @@ const enrollmentStatus = ref<'active' | 'completed' | 'cancelled' | null>(null);
 const currentEnrollmentId = ref<string | null>(null);
 const enrollmentLoading = ref(false);
 
-const isStudent = computed(() => auth.hasRole('student'));
+const showUnenrollModal = ref(false);
+
+const isStudent = computed(() => {
+  return auth.state.authenticated && !auth.hasRole('admin') && !auth.hasRole('instructor');
+});
 
 const canAccessContent = computed(() => {
   return (enrollmentStatus.value === 'active' || enrollmentStatus.value === 'completed') ||
@@ -75,18 +80,18 @@ async function handleEnroll() {
   }
 }
 
-async function handleUnenroll() {
-  if (!currentEnrollmentId.value) return;
+function handleUnenrollClick() {
+  showUnenrollModal.value = true;
+}
 
-  if (!confirm("Opravdu se chcete odhlásit z kurzu?")) {
-    return;
-  }
+async function confirmUnenroll() {
+  if (!currentEnrollmentId.value) return;
+  showUnenrollModal.value = false;
 
   enrollmentLoading.value = true;
   try {
     await updateEnrollmentStatus(currentEnrollmentId.value, 'cancelled');
     enrollmentStatus.value = 'cancelled';
-    alert("Byli jste úspěšně odhlášeni.");
   } catch (e) {
     console.error("Unenrollment failed", e);
     alert("Nepodařilo se odhlásit z kurzu.");
@@ -172,7 +177,7 @@ function goBack() {
               <p class="enrolled-msg">Jste zapsáni v tomto kurzu.</p>
               <button
                   class="btn btn-danger btn-outline"
-                  @click="handleUnenroll"
+                  @click="handleUnenrollClick"
                   :disabled="enrollmentLoading"
               >
                 {{ enrollmentLoading ? 'Odhlašuji...' : 'Odhlásit se z kurzu' }}
@@ -230,6 +235,21 @@ function goBack() {
         </section>
       </div>
     </div>
+
+    <BaseModal
+        :is-open="showUnenrollModal"
+        title="Odhlášení z kurzu"
+        @close="showUnenrollModal = false"
+        @confirm="confirmUnenroll"
+    >
+      <p>Opravdu se chcete odhlásit z tohoto kurzu?</p>
+      <p style="font-size: 0.9rem; color: #64748b;">Přijdete o přístup k lekcím, ale vaše postupy se mohou smazat.</p>
+      <template #footer>
+        <button class="btn btn-secondary" @click="showUnenrollModal = false">Zrušit</button>
+        <button class="btn btn-danger" @click="confirmUnenroll">Ano, odhlásit</button>
+      </template>
+    </BaseModal>
+
   </main>
 </template>
 
@@ -306,7 +326,7 @@ h2 {
 .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
 .btn-large { padding: 0.75rem 2rem; font-size: 1.1rem; }
 .btn-danger { color: #dc2626; border-color: #dc2626; background: transparent; margin-top: 1rem; }
-.btn-danger:hover { background: #fef2f2; }
+.btn-danger:hover { background: #fef2f2; color: #b91c1c; }
 
 .lessons-list { display: flex; flex-direction: column; }
 
