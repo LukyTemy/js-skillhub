@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, reactive } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useCourseService } from '@/composables/useCourseService';
+import { useCourseService, type QuizResult } from '@/composables/useCourseService';
 import { useEnrollmentService } from '@/composables/useEnrollmentService';
 import { useAuth } from '@/composables/useAuth';
 import type { Course } from '@/model/Course';
@@ -9,7 +9,7 @@ import BaseModal from '@/components/BaseModal.vue';
 
 const route = useRoute();
 const router = useRouter();
-const { getCourseById } = useCourseService();
+const { getCourseById, evaluateQuiz } = useCourseService();
 const { getUserEnrollments, getCurrentBackendUser, updateEnrollmentStatus } = useEnrollmentService();
 const auth = useAuth();
 
@@ -23,6 +23,12 @@ const isCourseCompleted = ref(false);
 const showFinishModal = ref(false);
 const showSuccessModal = ref(false);
 const processingFinish = ref(false);
+
+// Quiz State
+// Map: Block Index -> Array of answers (indices)
+const quizAnswers = reactive<Record<number, number[]>>({});
+const quizResults = reactive<Record<number, QuizResult | null>>({});
+const quizLoading = reactive<Record<number, boolean>>({});
 
 const isInstructorOrAdmin = computed(() => auth.hasRole('instructor') || auth.hasRole('admin'));
 
@@ -103,6 +109,10 @@ const nextLesson = computed(() => {
 
 function navigateToLesson(lessonId: string) {
   if (!course.value) return;
+  // Reset quiz state when navigating
+  for (const key in quizAnswers) delete quizAnswers[key];
+  for (const key in quizResults) delete quizResults[key];
+
   router.push({
     name: 'lesson-detail',
     params: { id: course.value._id, lessonId: lessonId }
@@ -121,9 +131,7 @@ function handleFinishClick() {
 
 async function confirmFinishCourse() {
   if (!currentEnrollmentId.value) return;
-
   processingFinish.value = true;
-
   try {
     await updateEnrollmentStatus(currentEnrollmentId.value, 'completed');
     isCourseCompleted.value = true;
@@ -152,6 +160,43 @@ function getEmbedUrl(url: string): string {
     return url.replace('youtu.be/', 'youtube.com/embed/');
   }
   return url;
+}
+
+// Quiz Logic
+function initQuizAnswer(blockIndex: number, questionCount: number) {
+  if (!quizAnswers[blockIndex]) {
+    quizAnswers[blockIndex] = new Array(questionCount).fill(-1);
+  }
+}
+
+async function submitQuiz(blockIndex: number) {
+  if (!course.value || !currentLesson.value) return;
+  const answers = quizAnswers[blockIndex];
+
+  if (answers.includes(-1)) {
+    alert("Prosím, odpovězte na všechny otázky před vyhodnocením.");
+    return;
+  }
+
+  quizLoading[blockIndex] = true;
+  try {
+    const result = await evaluateQuiz(
+        course.value._id,
+        currentLesson.value.lessonId,
+        answers
+    );
+    quizResults[blockIndex] = result;
+  } catch (e) {
+    console.error("Quiz evaluation failed", e);
+    alert("Chyba při vyhodnocení testu.");
+  } finally {
+    quizLoading[blockIndex] = false;
+  }
+}
+
+function resetQuiz(blockIndex: number, questionCount: number) {
+  quizAnswers[blockIndex] = new Array(questionCount).fill(-1);
+  quizResults[blockIndex] = null;
 }
 </script>
 
@@ -214,6 +259,58 @@ function getEmbedUrl(url: string): string {
                 </div>
               </div>
               <p v-if="block.caption" class="video-caption">{{ block.caption }}</p>
+            </div>
+
+            <div v-else-if="block.type === 'quiz'" class="quiz-block" :class="{ 'quiz-passed': quizResults[index]?.passed }">
+              <div class="quiz-header">
+                <h3>📝 Vědomostní test</h3>
+                <span class="pass-req">Minimální úspěšnost: {{ block.minPassPercent || 50 }}%</span>
+              </div>
+
+              <div class="quiz-questions">
+                <div style="display:none">{{ initQuizAnswer(index, block.questions?.length || 0) }}</div>
+
+                <div v-for="(question, qIndex) in block.questions" :key="qIndex" class="question-card">
+                  <p class="question-text">{{ qIndex + 1 }}. {{ question.text }}</p>
+                  <div class="options-list">
+                    <label v-for="(option, oIndex) in question.options" :key="oIndex" class="option-label" :class="{ 'disabled': !!quizResults[index] }">
+                      <input
+                          type="radio"
+                          :name="'q-' + index + '-' + qIndex"
+                          :value="oIndex"
+                          v-model="quizAnswers[index][qIndex]"
+                          :disabled="!!quizResults[index]"
+                      >
+                      <span class="option-text">{{ option }}</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="quiz-footer">
+                <div v-if="!quizResults[index]">
+                  <button class="btn btn-primary" @click="submitQuiz(index)" :disabled="quizLoading[index]">
+                    {{ quizLoading[index] ? 'Vyhodnocuji...' : 'Vyhodnotit test' }}
+                  </button>
+                </div>
+
+                <div v-else class="quiz-result" :class="{ 'passed': quizResults[index].passed, 'failed': !quizResults[index].passed }">
+                  <div class="result-header">
+                    <span class="icon">{{ quizResults[index].passed ? '✅' : '❌' }}</span>
+                    <span class="score-text">
+                       Výsledek: {{ quizResults[index].score }} / {{ quizResults[index].totalQuestions }}
+                       ({{ quizResults[index].passedPercent.toFixed(0) }}%)
+                     </span>
+                  </div>
+                  <p class="result-msg">
+                    {{ quizResults[index].passed ? 'Gratulujeme, test jste úspěšně splnili!' : 'Bohužel, neuspěli jste. Zkuste to znovu.' }}
+                  </p>
+
+                  <button v-if="!quizResults[index].passed" class="btn btn-secondary btn-sm" @click="resetQuiz(index, block.questions?.length || 0)">
+                    Opakovat test
+                  </button>
+                </div>
+              </div>
             </div>
 
           </div>
@@ -460,6 +557,65 @@ function getEmbedUrl(url: string): string {
 }
 .url-text { margin-top: 1rem; font-size: 0.85rem; opacity: 0.7; }
 .video-caption { text-align: center; color: #64748b; margin-top: 0.5rem; font-size: 0.9rem; font-style: italic; }
+
+.quiz-block {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.quiz-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #f1f5f9;
+  padding-bottom: 1rem;
+}
+
+.quiz-header h3 { margin: 0; font-size: 1.25rem; color: #0f172a; }
+.pass-req { font-size: 0.9rem; color: #64748b; background: #f1f5f9; padding: 0.25rem 0.75rem; border-radius: 999px; }
+
+.quiz-questions { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.question-text { font-weight: 600; font-size: 1.05rem; margin-bottom: 0.75rem; color: #1e293b; }
+
+.options-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.option-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.option-label:hover:not(.disabled) { background: #f8fafc; border-color: #cbd5e1; }
+.option-label.disabled { cursor: default; opacity: 0.8; }
+
+.option-text { font-size: 1rem; color: #334155; }
+
+.quiz-footer { margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1.5rem; }
+
+.quiz-result {
+  background: #f8fafc;
+  padding: 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+}
+.quiz-result.passed { background: #f0fdf4; border: 1px solid #bbf7d0; }
+.quiz-result.failed { background: #fef2f2; border: 1px solid #fecaca; }
+
+.result-header { font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+.quiz-result.passed .result-header { color: #166534; }
+.quiz-result.failed .result-header { color: #991b1b; }
+
+.result-msg { color: #4b5563; margin-bottom: 1rem; }
 
 .lesson-footer {
   padding: 2rem;

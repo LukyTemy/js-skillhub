@@ -1,10 +1,10 @@
-// BACKEND: src/database/models/course.model.ts
 import { ObjectId } from "mongodb";
 
 export enum ContentType {
     Text = "text",
     Code = "code",
     Video = "video",
+    Quiz = "quiz",
 }
 
 export interface TextContent {
@@ -25,7 +25,19 @@ export interface VideoContent {
     caption?: string;
 }
 
-export type LessonContent = TextContent | CodeContent | VideoContent;
+export interface QuizQuestion {
+    text: string;
+    options: string[];
+    correctOptionIndex: number;
+}
+
+export interface QuizContent {
+    type: ContentType.Quiz;
+    questions: QuizQuestion[];
+    minPassPercent?: number;
+}
+
+export type LessonContent = TextContent | CodeContent | VideoContent | QuizContent;
 
 export interface Lesson {
     lessonId: ObjectId;

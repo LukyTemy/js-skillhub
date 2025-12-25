@@ -9,6 +9,17 @@ export interface NewCoursePayload {
   lessons: any[];
 }
 
+export interface EvaluateQuizPayload {
+  answers: number[];
+}
+
+export interface QuizResult {
+  passed: boolean;
+  score: number;
+  totalQuestions: number;
+  passedPercent: number;
+}
+
 export function useCourseService() {
   const auth = useAuth();
 
@@ -30,10 +41,18 @@ export function useCourseService() {
     return data as Course;
   };
 
+  const evaluateQuiz = async (courseId: string, lessonId: string, answers: number[]): Promise<QuizResult> => {
+    const data = await auth.authorizedRequest(`${config.backendUrl}/courses/${courseId}/lessons/${lessonId}/quiz/evaluate`, {
+      method: 'POST',
+      data: { answers }
+    });
+    return data as QuizResult;
+  };
+
   return {
     listCourses,
     createCourse,
-    getCourseById
+    getCourseById,
+    evaluateQuiz
   };
 }
-

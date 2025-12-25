@@ -4,12 +4,20 @@ import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import { useCourseService, type NewCoursePayload } from '@/composables/useCourseService';
 
+interface QuestionDraft {
+  text: string;
+  options: string[];
+  correctOptionIndex: number;
+}
+
 interface ContentDraft {
-  type: 'text' | 'code' | 'video';
+  type: 'text' | 'code' | 'video' | 'quiz';
   text?: string;
   code?: string;
   language?: string;
   url?: string;
+  questions?: QuestionDraft[];
+  minPassPercent?: number;
 }
 
 interface LessonDraft {
@@ -42,7 +50,18 @@ const isValid = computed(() => {
       !!description.value && description.value.length >= 10 &&
       !!category.value && category.value.length >= 2;
 
-  const lessonsValid = lessons.value.every(l => l.title.length >= 2);
+  const lessonsValid = lessons.value.every(l => {
+    const titleValid = l.title.length >= 2;
+    const contentValid = l.content.every(c => {
+      if (c.type === 'quiz') {
+        return c.questions && c.questions.length > 0 && c.questions.every(q =>
+            q.text.length > 0 && q.options.every(o => o.length > 0)
+        );
+      }
+      return true;
+    });
+    return titleValid && contentValid;
+  });
 
   return basicInfoValid && lessonsValid;
 });
@@ -65,7 +84,7 @@ function removeLesson(index: number) {
   lessons.value.splice(index, 1);
 }
 
-function addContent(lessonIndex: number, type: 'text' | 'code' | 'video') {
+function addContent(lessonIndex: number, type: 'text' | 'code' | 'video' | 'quiz') {
   const contentItem: ContentDraft = { type };
   if (type === 'text') contentItem.text = '';
   if (type === 'code') {
@@ -73,6 +92,11 @@ function addContent(lessonIndex: number, type: 'text' | 'code' | 'video') {
     contentItem.language = 'javascript';
   }
   if (type === 'video') contentItem.url = '';
+  if (type === 'quiz') {
+    contentItem.questions = [];
+    contentItem.minPassPercent = 50;
+    addQuestionToDraft(contentItem);
+  }
 
   lessons.value[lessonIndex].content.push(contentItem);
 }
@@ -86,6 +110,21 @@ function moveLesson(index: number, direction: -1 | 1) {
   const temp = lessons.value[index];
   lessons.value[index] = lessons.value[index + direction];
   lessons.value[index + direction] = temp;
+}
+
+function addQuestionToDraft(content: ContentDraft) {
+  if (!content.questions) content.questions = [];
+  content.questions.push({
+    text: '',
+    options: ['', '', '', ''],
+    correctOptionIndex: 0
+  });
+}
+
+function removeQuestionFromDraft(content: ContentDraft, qIndex: number) {
+  if (content.questions) {
+    content.questions.splice(qIndex, 1);
+  }
 }
 
 function validateFields() {
@@ -125,6 +164,17 @@ async function submit() {
         if (c.type === 'text') return { type: 'text', text: c.text || '' };
         if (c.type === 'code') return { type: 'code', code: c.code || '', language: c.language || 'javascript' };
         if (c.type === 'video') return { type: 'video', url: c.url || '' };
+        if (c.type === 'quiz') {
+          return {
+            type: 'quiz',
+            minPassPercent: c.minPassPercent || 50,
+            questions: c.questions?.map(q => ({
+              text: q.text,
+              options: q.options,
+              correctOptionIndex: q.correctOptionIndex
+            })) || []
+          };
+        }
         return { type: 'text', text: '' };
       })
     }));
@@ -252,6 +302,36 @@ function goBack() {
                 <div v-if="content.type === 'video'" class="content-body">
                   <input v-model="content.url" type="text" placeholder="URL adresa videa (Vimeo, YouTube...)" />
                 </div>
+
+                <div v-if="content.type === 'quiz'" class="content-body quiz-editor">
+                  <div class="form-group">
+                    <label>Minimální úspěšnost pro splnění (%)</label>
+                    <input type="number" v-model="content.minPassPercent" min="0" max="100" style="width: 100px;">
+                  </div>
+
+                  <div v-for="(question, qIndex) in content.questions" :key="qIndex" class="question-item">
+                    <div class="question-header">
+                      <span class="q-label">Otázka {{ qIndex + 1 }}</span>
+                      <button type="button" class="text-btn danger" @click="removeQuestionFromDraft(content, qIndex)">Smazat otázku</button>
+                    </div>
+
+                    <input v-model="question.text" type="text" placeholder="Znění otázky..." class="question-input">
+
+                    <div class="options-grid">
+                      <div v-for="(opt, oIndex) in question.options" :key="oIndex" class="option-row">
+                        <input
+                            type="radio"
+                            :name="'correct-' + lIndex + '-' + cIndex + '-' + qIndex"
+                            :value="oIndex"
+                            v-model="question.correctOptionIndex"
+                            title="Označit jako správnou odpověď"
+                        >
+                        <input v-model="question.options[oIndex]" type="text" :placeholder="'Možnost ' + (oIndex + 1)">
+                      </div>
+                    </div>
+                  </div>
+                  <button type="button" class="btn-xs add-q-btn" @click="addQuestionToDraft(content)">+ Přidat další otázku</button>
+                </div>
               </div>
             </div>
 
@@ -260,6 +340,7 @@ function goBack() {
               <button type="button" class="btn-xs" @click="addContent(lIndex, 'text')">Text</button>
               <button type="button" class="btn-xs" @click="addContent(lIndex, 'code')">Kód</button>
               <button type="button" class="btn-xs" @click="addContent(lIndex, 'video')">Video</button>
+              <button type="button" class="btn-xs" @click="addContent(lIndex, 'quiz')">Test</button>
             </div>
           </div>
         </div>
@@ -444,6 +525,7 @@ textarea:focus {
 .badge.text { background: #e0f2fe; color: #0369a1; }
 .badge.code { background: #f3e8ff; color: #7e22ce; }
 .badge.video { background: #fce7f3; color: #be185d; }
+.badge.quiz { background: #fef3c7; color: #b45309; }
 
 .content-body {
   display: flex;
@@ -460,6 +542,59 @@ textarea:focus {
   font-family: 'Courier New', Courier, monospace;
   font-size: 0.9rem;
   background: #f8fafc;
+}
+
+.quiz-editor {
+  background: #fffbeb;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #fcd34d;
+}
+
+.question-item {
+  background: white;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 1rem;
+}
+
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.question-input {
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.option-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.option-row input[type="radio"] {
+  width: auto;
+  cursor: pointer;
+}
+
+.add-q-btn {
+  width: 100%;
+  margin-top: 0.5rem;
+  background: white;
+  border-style: dashed;
 }
 
 .add-content-actions {

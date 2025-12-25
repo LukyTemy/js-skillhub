@@ -86,6 +86,7 @@ server.get("/instructors/:id/courses", authenticate, courseController.getByInstr
 server.post("/courses/:id/lessons", authenticate, courseController.addLesson);
 server.put("/courses/:id/lessons/:lessonId", authenticate, courseController.updateLesson);
 server.delete("/courses/:id/lessons/:lessonId", authenticate, courseController.deleteLesson);
+server.post("/courses/:id/lessons/:lessonId/quiz/evaluate", authenticate, courseController.evaluateQuiz);
 
 // Enrollments
 const enrollmentController = new EnrollmentController();
