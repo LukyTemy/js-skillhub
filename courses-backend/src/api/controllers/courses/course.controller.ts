@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { CourseDto, EvaluateQuizDto, LessonDto } from "../../../types/dto/course.dto";
+import {CourseDto, LessonDto} from "../../../types/dto/course.dto";
 import { Request, Response } from "express";
 import { courseService } from "../../../services/course.service";
 import { validateBody, validateParams } from "../../../middleware/validation.middleware";
@@ -38,7 +38,6 @@ export class CourseController {
      * /courses/{id}:
      *   get:
      *     summary: Získá detail kurzu podle ID
-     *     description: Pokud volá student, nevrací správné odpovědi kvízů. Pokud instruktor/admin, vrací vše.
      *     tags: [Courses]
      *     security:
      *       - bearerAuth: []
@@ -59,7 +58,7 @@ export class CourseController {
      *       404:
      *         description: Kurz nenalezen
      */
-    async getById(req: AuthenticatedRequest, res: Response) {
+    async getById(req: Request, res: Response) {
         const { id } = await validateParams(req, IdParam);
         const course = await courseService.getById(id);
 
@@ -68,16 +67,7 @@ export class CourseController {
             return;
         }
 
-        const user = req.user as any;
-        const roles = user?.resource_access?.["web-app"]?.roles || [];
-        const isInstructorOrAdmin = roles.includes("instructor") || roles.includes("admin");
-
-        if (isInstructorOrAdmin) {
-            res.status(200).send(course);
-        } else {
-            const sanitized = courseService.sanitizeForStudent(course);
-            res.status(200).send(sanitized);
-        }
+        res.status(200).send(course);
     }
 
     /**
@@ -366,54 +356,5 @@ export class CourseController {
         const { id } = await validateParams(req, IdParam);
         const courses = await courseService.getByInstructor(id);
         res.status(200).send(courses);
-    }
-
-    /**
-     * @swagger
-     * /courses/{id}/lessons/{lessonId}/quiz/evaluate:
-     *   post:
-     *     summary: Vyhodnotí kvíz v lekci
-     *     tags: [Courses]
-     *     security:
-     *       - bearerAuth: []
-     *     parameters:
-     *       - in: path
-     *         name: id
-     *         schema:
-     *           type: string
-     *         required: true
-     *         description: ID kurzu
-     *       - in: path
-     *         name: lessonId
-     *         schema:
-     *           type: string
-     *         required: true
-     *         description: ID lekce
-     *     requestBody:
-     *       required: true
-     *       content:
-     *         application/json:
-     *           schema:
-     *             $ref: '#/components/schemas/EvaluateQuizDto'
-     *     responses:
-     *       200:
-     *         description: Výsledek kvízu
-     *         content:
-     *           application/json:
-     *             schema:
-     *               $ref: '#/components/schemas/QuizResultDto'
-     *       400:
-     *         description: Chyba validace nebo nesprávný počet odpovědí
-     */
-    async evaluateQuiz(req: Request, res: Response) {
-        const { id, lessonId } = req.params;
-        const dto = await validateBody(req, EvaluateQuizDto);
-
-        try {
-            const result = await courseService.evaluateQuiz(id, lessonId, dto);
-            res.status(200).send(result);
-        } catch (e: any) {
-            res.status(400).json({ error: e.message });
-        }
     }
 }

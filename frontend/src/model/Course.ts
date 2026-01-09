@@ -1,19 +1,14 @@
-export interface QuizQuestion {
-    text: string;
-    options: string[];
-    correctOptionIndex: number;
-}
+// FRONTEND: src/model/Course.ts
 
 export interface LessonContent {
-    type: 'text' | 'code' | 'video' | 'quiz';
+    type: 'text' | 'code' | 'video';
+    // Volitelné vlastnosti podle typu obsahu
     text?: string;
     code?: string;
     language?: string;
     filename?: string;
     url?: string;
     caption?: string;
-    questions?: QuizQuestion[];
-    minPassPercent?: number;
 }
 
 export interface Lesson {
@@ -26,8 +21,8 @@ export interface Lesson {
 export interface Course {
     _id: string;
     title: string;
-    description: string;
-    category: string;
+    description: string; // ZDE BYL PROBLÉM: odstraněn otazník (?)
+    category: string;    // ZDE BYL PROBLÉM: odstraněn otazník (?)
     instructorId: string;
 
     createdAt?: string | Date;

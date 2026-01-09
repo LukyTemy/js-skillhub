@@ -1,5 +1,5 @@
-import Course, { ContentType, QuizContent } from "../database/models/course.model";
-import { CourseDto, EvaluateQuizDto, QuizResultDto } from "../types/dto/course.dto";
+import Course from "../database/models/course.model";
+import { CourseDto } from "../types/dto/course.dto";
 import mongo from "../database/mongo";
 import { ObjectId } from "mongodb";
 
@@ -16,7 +16,7 @@ export const courseService = {
             data.description,
             data.category,
             new ObjectId(data.instructorId),
-            lessonsWithIds as any
+            lessonsWithIds
         );
 
         course.createdAt = new Date();
@@ -85,60 +85,4 @@ export const courseService = {
             { returnDocument: "after" }
         );
     },
-
-    sanitizeForStudent(course: any) {
-        if (!course || !course.lessons) return course;
-
-        const sanitizedLessons = course.lessons.map((lesson: any) => ({
-            ...lesson,
-            content: lesson.content.map((block: any) => {
-                if (block.type === ContentType.Quiz && block.questions) {
-                    return {
-                        ...block,
-                        questions: block.questions.map((q: any) => {
-                            const { correctOptionIndex, ...rest } = q;
-                            return rest;
-                        })
-                    };
-                }
-                return block;
-            })
-        }));
-
-        return { ...course, lessons: sanitizedLessons };
-    },
-
-    async evaluateQuiz(courseId: string, lessonId: string, submission: EvaluateQuizDto): Promise<QuizResultDto> {
-        const course = await this.course_collection.findOne({ _id: new ObjectId(courseId) }) as unknown as Course;
-        if (!course) throw new Error("Course not found");
-
-        const lesson = course.lessons.find((l: any) => l.lessonId.toString() === lessonId);
-        if (!lesson) throw new Error("Lesson not found");
-
-        const quizBlock = lesson.content.find((b: any) => b.type === ContentType.Quiz) as QuizContent;
-        if (!quizBlock || !quizBlock.questions) throw new Error("No quiz found in this lesson");
-
-        if (submission.answers.length !== quizBlock.questions.length) {
-            throw new Error("Invalid number of answers");
-        }
-
-        let correctCount = 0;
-        quizBlock.questions.forEach((question, index) => {
-            if (question.correctOptionIndex === submission.answers[index]) {
-                correctCount++;
-            }
-        });
-
-        const totalQuestions = quizBlock.questions.length;
-        const passedPercent = (correctCount / totalQuestions) * 100;
-        const minPass = quizBlock.minPassPercent || 50;
-        const passed = passedPercent >= minPass;
-
-        return {
-            passed,
-            score: correctCount,
-            totalQuestions,
-            passedPercent
-        };
-    }
 };
