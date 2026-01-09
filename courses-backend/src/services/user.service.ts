@@ -2,6 +2,7 @@ import User from "../database/models/user.model";
 import {UserDto, UserFromKeycloakDto} from "../types/dto/user.dto";
 import mongo from "../database/mongo";
 import {ObjectId} from "mongodb";
+import { sendMail } from "../grpc/mail.client";
 
 export const userService = {
     user_collection: mongo.db.collection("users"),
@@ -25,6 +26,19 @@ export const userService = {
     async createFromKeycloak(data: UserFromKeycloakDto) {
         const user = new User(data.name ?? '', data.email ?? '', data.role ?? ("student" as any), data.keycloakUuid);
         await this.user_collection.insertOne(user);
+
+        if (data.email) {
+            try {
+                await sendMail({
+                    to: data.email,
+                    subject: "Vítejte v SkillHub",
+                    text: `Dobrý den ${data.name ?? 'uživateli'},\n\nvítáme vás na platformě SkillHub. Vaše registrace proběhla úspěšně a váš účet je připraven.\n\nTým SkillHub`
+                });
+            } catch (e) {
+                console.error("Failed to send welcome email:", e);
+            }
+        }
+
         return user;
     },
 
